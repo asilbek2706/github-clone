@@ -4,6 +4,7 @@ export interface RegisterInput {
   password: string;
   name?: string;
 }
+
 export interface LoginInput {
   email: string;
   password: string;
