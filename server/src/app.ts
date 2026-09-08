@@ -2,6 +2,9 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 
+import { errorMiddleware } from './middleware/error.middleware.js';
+import authRoutes from './modules/auth/auth.routes.js';
+
 const app = express();
 
 app.use(helmet());
@@ -22,5 +25,9 @@ app.get('/api/health', (_req, res) => {
     message: 'GitHub Clone API is running',
   });
 });
+
+app.use('/api/auth', authRoutes);
+
+app.use(errorMiddleware);
 
 export default app;
