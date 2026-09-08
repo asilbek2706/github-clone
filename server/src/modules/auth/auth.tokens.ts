@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 
 import { jwtConfig } from '../../config/jwt.js';
@@ -9,7 +10,14 @@ interface AccessTokenPayload {
 
 interface RefreshTokenPayload {
   sub: string;
+  jti: string;
   type: 'refresh';
+}
+
+export interface RefreshTokenData {
+  token: string;
+  tokenHash: string;
+  jti: string;
 }
 
 export const generateAccessToken = (userId: string): string => {
@@ -27,19 +35,41 @@ export const generateAccessToken = (userId: string): string => {
   );
 };
 
-export const generateRefreshToken = (userId: string): string => {
+export const hashRefreshToken = (
+  token: string,
+): string => {
+  return crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+};
+
+export const generateRefreshToken = (
+  userId: string,
+): RefreshTokenData => {
+  const jti = crypto.randomUUID();
+
   const payload: RefreshTokenPayload = {
     sub: userId,
+    jti,
     type: 'refresh',
   };
 
-  return jwt.sign(
+  const token = jwt.sign(
     payload,
     jwtConfig.refreshSecret,
     {
       expiresIn: jwtConfig.refreshExpiresIn!,
     },
   );
+
+const tokenHash = hashRefreshToken(token);
+
+  return {
+    token,
+    tokenHash,
+    jti,
+  };
 };
 
 export const verifyAccessToken = (
@@ -75,13 +105,15 @@ export const verifyRefreshToken = (
   if (
     typeof payload === 'string' ||
     payload.type !== 'refresh' ||
-    typeof payload.sub !== 'string'
+    typeof payload.sub !== 'string' ||
+    typeof payload.jti !== 'string'
   ) {
     throw new Error('Invalid refresh token');
   }
 
   return {
     sub: payload.sub,
+    jti: payload.jti,
     type: 'refresh',
   };
 };
