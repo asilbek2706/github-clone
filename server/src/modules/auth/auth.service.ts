@@ -5,6 +5,8 @@ import { AuthError } from './auth.errors.js';
 import {
   generateAccessToken,
   generateRefreshToken,
+  hashRefreshToken,
+  verifyRefreshToken,
 } from './auth.tokens.js';
 import type {
   AuthResponse,
@@ -14,6 +16,7 @@ import type {
 } from './auth.types.js';
 
 const SALT_ROUNDS = 12;
+const REFRESH_TOKEN_EXPIRES_IN_DAYS = 7;
 
 const toAuthUser = (user: {
   id: string;
@@ -34,6 +37,16 @@ const toAuthUser = (user: {
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
+
+const getRefreshTokenExpiresAt = (): Date => {
+  const expiresAt = new Date();
+
+  expiresAt.setDate(
+    expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_IN_DAYS,
+  );
+
+  return expiresAt;
+};
 
 export const registerUser = async (
   input: RegisterInput,
@@ -80,10 +93,18 @@ export const registerUser = async (
   const accessToken = generateAccessToken(user.id);
   const refreshToken = generateRefreshToken(user.id);
 
+  await prisma.session.create({
+    data: {
+      userId: user.id,
+      refreshTokenHash: refreshToken.tokenHash,
+      expiresAt: getRefreshTokenExpiresAt(),
+    },
+  });
+
   return {
     user: toAuthUser(user),
     accessToken,
-    refreshToken,
+    refreshToken: refreshToken.token,
   };
 };
 
@@ -120,9 +141,105 @@ export const loginUser = async (
   const accessToken = generateAccessToken(user.id);
   const refreshToken = generateRefreshToken(user.id);
 
+  await prisma.session.create({
+    data: {
+      userId: user.id,
+      refreshTokenHash: refreshToken.tokenHash,
+      expiresAt: getRefreshTokenExpiresAt(),
+    },
+  });
+
   return {
     user: toAuthUser(user),
     accessToken,
-    refreshToken,
+    refreshToken: refreshToken.token,
+  };
+};
+
+export const refreshAuth = async (
+  refreshToken: string,
+): Promise<AuthResponse> => {
+  const payload = verifyRefreshToken(refreshToken);
+
+  const refreshTokenHash = hashRefreshToken(refreshToken);
+
+  const session = await prisma.session.findUnique({
+    where: {
+      refreshTokenHash,
+    },
+  });
+
+  if (!session) {
+    throw new AuthError(
+      'Invalid refresh token',
+      401,
+      'INVALID_REFRESH_TOKEN',
+    );
+  }
+
+  if (session.revokedAt !== null) {
+    throw new AuthError(
+      'Refresh token has been revoked',
+      401,
+      'REFRESH_TOKEN_REVOKED',
+    );
+  }
+
+  if (session.expiresAt <= new Date()) {
+    throw new AuthError(
+      'Refresh token has expired',
+      401,
+      'REFRESH_TOKEN_EXPIRED',
+    );
+  }
+
+  if (session.userId !== payload.sub) {
+    throw new AuthError(
+      'Invalid refresh token',
+      401,
+      'INVALID_REFRESH_TOKEN',
+    );
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: session.userId,
+    },
+  });
+
+  if (!user) {
+    throw new AuthError(
+      'User not found',
+      401,
+      'USER_NOT_FOUND',
+    );
+  }
+
+  const accessToken = generateAccessToken(user.id);
+  const newRefreshToken = generateRefreshToken(user.id);
+
+  await prisma.$transaction([
+    prisma.session.update({
+      where: {
+        id: session.id,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    }),
+
+    prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: newRefreshToken.tokenHash,
+        expiresAt: getRefreshTokenExpiresAt(),
+      },
+    }),
+  ]);
+
+  return {
+    user: toAuthUser(user),
+    accessToken,
+    refreshToken: newRefreshToken.token,
   };
 };
