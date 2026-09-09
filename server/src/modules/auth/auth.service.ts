@@ -243,3 +243,23 @@ export const refreshAuth = async (
     refreshToken: newRefreshToken.token,
   };
 };
+
+export const getCurrentUser = async (
+  userId: string,
+): Promise<AuthUser> => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new AuthError(
+      'User not found',
+      404,
+      'USER_NOT_FOUND',
+    );
+  }
+
+  return toAuthUser(user);
+};
