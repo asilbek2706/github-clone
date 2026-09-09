@@ -6,6 +6,7 @@ import {
 } from './auth.cookies.js';
 import { AuthError } from './auth.errors.js';
 import {
+  getCurrentUser,
   loginUser,
   refreshAuth,
   registerUser,
@@ -14,6 +15,7 @@ import {
   loginSchema,
   registerSchema,
 } from './auth.validation.js';
+import type { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 
 export const register = async (
   req: Request,
@@ -107,4 +109,20 @@ export const getRefreshTokenFromCookie = (
   req: Request,
 ): string | undefined => {
   return req.cookies?.[getRefreshTokenCookieName()];
+};
+
+export const me = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
+
+  const user = await getCurrentUser(authenticatedReq.userId);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user,
+    },
+  });
 };
