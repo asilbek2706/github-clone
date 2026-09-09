@@ -263,3 +263,19 @@ export const getCurrentUser = async (
 
   return toAuthUser(user);
 };
+
+export const logoutUser = async (
+  refreshToken: string,
+): Promise<void> => {
+  const tokenHash = hashRefreshToken(refreshToken);
+
+  await prisma.session.updateMany({
+    where: {
+      refreshTokenHash: tokenHash,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+};
