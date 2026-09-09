@@ -4,7 +4,7 @@ import { authMiddleware } from '../../middleware/auth.middleware.js';
 import {
   create,
   getOne,
-  listMine,
+  listByUsername,
   remove,
   update,
 } from './repository.controller.js';
@@ -12,10 +12,9 @@ import {
 const router = Router();
 
 router.post('/', authMiddleware, create);
-router.get('/', authMiddleware, listMine);
+router.get('/:username', listByUsername);
 router.get('/:username/:name', getOne);
-router.patch('/:id', authMiddleware, update);
-router.delete('/:id', authMiddleware, remove);
+router.patch('/:username/:name', authMiddleware, update);
+router.delete('/:username/:name', authMiddleware, remove);
 
 export default router;
-

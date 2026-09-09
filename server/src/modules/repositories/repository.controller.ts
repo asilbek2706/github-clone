@@ -43,15 +43,21 @@ export const create = async (
   });
 };
 
-export const listMine = async (
+export const listByUsername = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const authenticatedReq = req as AuthenticatedRequest;
+  const { username } = req.params;
 
-  const repositories = await getUserRepositories(
-    authenticatedReq.userId,
-  );
+  if (typeof username !== 'string') {
+    throw new AuthError(
+      'Username is required',
+      400,
+      'INVALID_USERNAME',
+    );
+  }
+
+  const repositories = await getUserRepositories(username);
 
   res.status(200).json({
     success: true,
@@ -96,13 +102,16 @@ export const update = async (
   res: Response,
 ): Promise<void> => {
   const authenticatedReq = req as AuthenticatedRequest;
-  const { id } = req.params;
+  const { username, name } = req.params;
 
-  if (typeof id !== 'string') {
+  if (
+    typeof username !== 'string' ||
+    typeof name !== 'string'
+  ) {
     throw new AuthError(
-      'Repository id is required',
+      'Username and repository name are required',
       400,
-      'INVALID_REPOSITORY_ID',
+      'INVALID_REPOSITORY_PARAMS',
     );
   }
 
@@ -118,7 +127,8 @@ export const update = async (
 
   const repository = await updateRepository(
     authenticatedReq.userId,
-    id,
+    username,
+    name,
     parsed.data,
   );
 
@@ -135,19 +145,23 @@ export const remove = async (
   res: Response,
 ): Promise<void> => {
   const authenticatedReq = req as AuthenticatedRequest;
-  const { id } = req.params;
+  const { username, name } = req.params;
 
-  if (typeof id !== 'string') {
+  if (
+    typeof username !== 'string' ||
+    typeof name !== 'string'
+  ) {
     throw new AuthError(
-      'Repository id is required',
+      'Username and repository name are required',
       400,
-      'INVALID_REPOSITORY_ID',
+      'INVALID_REPOSITORY_PARAMS',
     );
   }
 
   await deleteRepository(
     authenticatedReq.userId,
-    id,
+    username,
+    name,
   );
 
   res.status(200).json({

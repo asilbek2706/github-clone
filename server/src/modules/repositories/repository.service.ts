@@ -67,11 +67,13 @@ export const createRepository = async (
 };
 
 export const getUserRepositories = async (
-  ownerId: string,
+  username: string,
 ): Promise<RepositoryResponse[]> => {
   const repositories = await prisma.repository.findMany({
     where: {
-      ownerId,
+      owner: {
+        username,
+      },
     },
     orderBy: {
       createdAt: 'desc',
@@ -127,12 +129,16 @@ export const getRepositoryByUsernameAndName = async (
 
 export const updateRepository = async (
   ownerId: string,
-  repositoryId: string,
+  username: string,
+  name: string,
   input: UpdateRepositoryInput,
 ): Promise<RepositoryResponse> => {
-  const repository = await prisma.repository.findUnique({
+  const repository = await prisma.repository.findFirst({
     where: {
-      id: repositoryId,
+      name,
+      owner: {
+        username,
+      },
     },
   });
 
@@ -173,7 +179,7 @@ export const updateRepository = async (
 
   const updatedRepository = await prisma.repository.update({
     where: {
-      id: repositoryId,
+      id: repository.id,
     },
     data: {
       ...(input.name !== undefined && {
@@ -193,11 +199,15 @@ export const updateRepository = async (
 
 export const deleteRepository = async (
   ownerId: string,
-  repositoryId: string,
+  username: string,
+  name: string,
 ): Promise<void> => {
-  const repository = await prisma.repository.findUnique({
+  const repository = await prisma.repository.findFirst({
     where: {
-      id: repositoryId,
+      name,
+      owner: {
+        username,
+      },
     },
   });
 
@@ -219,7 +229,7 @@ export const deleteRepository = async (
 
   await prisma.repository.delete({
     where: {
-      id: repositoryId,
+      id: repository.id,
     },
   });
 };
