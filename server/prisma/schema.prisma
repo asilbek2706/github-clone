@@ -16,7 +16,8 @@ model User {
   avatarUrl String?
   bio       String?
 
-  sessions Session[]
+  sessions     Session[]
+  repositories Repository[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -36,4 +37,21 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Repository {
+  id            String  @id @default(cuid())
+  ownerId       String
+  name          String
+  description   String?
+  isPrivate     Boolean @default(false)
+  defaultBranch String  @default("main")
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([ownerId, name])
+  @@index([ownerId])
 }
