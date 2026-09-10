@@ -6,11 +6,13 @@ import { AuthError } from '../auth/auth.errors.js';
 
 const execFileAsync = promisify(execFile);
 
-const GIT_STORAGE_PATH = path.resolve(
-  process.cwd(),
-  'storage',
-  'repositories',
-);
+const storagePath = process.env.GIT_STORAGE_PATH;
+
+if (!storagePath) {
+  throw new Error('GIT_STORAGE_PATH is not defined');
+}
+
+const GIT_STORAGE_PATH = path.resolve(process.cwd(), storagePath);
 
 const getRepositoryPath = (
   username: string,
@@ -33,7 +35,12 @@ export const createGitRepository = async (
   );
 
   try {
-    await execFileAsync('git', ['init', '--bare', repositoryPath]);
+    await execFileAsync('git', [
+      'init',
+      '--bare',
+      '--initial-branch=main',
+      repositoryPath,
+    ]);
   } catch {
     throw new AuthError(
       'Failed to create Git repository',
