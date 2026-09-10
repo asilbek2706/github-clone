@@ -1,7 +1,7 @@
 {
-  "name": "github-clone-server",
+  "name": "gitzone-server",
   "version": "1.0.0",
-  "description": "Github Clone Backend Server",
+  "description": "GitZone Backend Server",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
