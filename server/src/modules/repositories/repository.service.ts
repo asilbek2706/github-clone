@@ -1,5 +1,6 @@
 import prisma from '../../config/prisma.js';
 import { AuthError } from '../auth/auth.errors.js';
+import { createGitRepository } from '../git/git.repository.service.js';
 import type {
   CreateRepositoryInput,
   UpdateRepositoryInput,
@@ -55,13 +56,42 @@ export const createRepository = async (
   }
 
   const repository = await prisma.repository.create({
-  data: {
-    ownerId,
-    name: input.name,
-    description: input.description ?? null,
-    isPrivate: input.isPrivate ?? false,
-  },
-});
+    data: {
+      ownerId,
+      name: input.name,
+      description: input.description ?? null,
+      isPrivate: input.isPrivate ?? false,
+    },
+  });
+
+  try {
+    const owner = await prisma.user.findUnique({
+      where: {
+        id: ownerId,
+      },
+      select: {
+        username: true,
+      },
+    });
+
+    if (!owner) {
+      throw new AuthError(
+        'Repository owner not found',
+        404,
+        'USER_NOT_FOUND',
+      );
+    }
+
+    await createGitRepository(owner.username, repository.name);
+  } catch (error) {
+    await prisma.repository.delete({
+      where: {
+        id: repository.id,
+      },
+    });
+
+    throw error;
+  }
 
   return toRepositoryResponse(repository);
 };
