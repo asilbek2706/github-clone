@@ -1,11 +1,15 @@
 import type { Request, Response } from 'express';
 
+import type { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
+
 import {
   clearRefreshTokenCookie,
   getRefreshTokenCookieName,
   setRefreshTokenCookie,
 } from './auth.cookies.js';
+
 import { AuthError } from './auth.errors.js';
+
 import {
   getCurrentUser,
   loginUser,
@@ -13,11 +17,14 @@ import {
   refreshAuth,
   registerUser,
 } from './auth.service.js';
+
+import { createPersonalAccessToken } from './pat.service.js';
+
 import {
+  createPersonalAccessTokenSchema,
   loginSchema,
   registerSchema,
 } from './auth.validation.js';
-import type { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 
 export const register = async (
   req: Request,
@@ -42,7 +49,10 @@ export const register = async (
       : {}),
   });
 
-  setRefreshTokenCookie(res, auth.refreshToken);
+  setRefreshTokenCookie(
+    res,
+    auth.refreshToken,
+  );
 
   res.status(201).json({
     success: true,
@@ -69,7 +79,10 @@ export const login = async (
 
   const auth = await loginUser(result.data);
 
-  setRefreshTokenCookie(res, auth.refreshToken);
+  setRefreshTokenCookie(
+    res,
+    auth.refreshToken,
+  );
 
   res.status(200).json({
     success: true,
@@ -84,7 +97,8 @@ export const refresh = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const refreshToken = getRefreshTokenFromCookie(req);
+  const refreshToken =
+    getRefreshTokenFromCookie(req);
 
   if (!refreshToken) {
     throw new AuthError(
@@ -94,9 +108,13 @@ export const refresh = async (
     );
   }
 
-  const auth = await refreshAuth(refreshToken);
+  const auth =
+    await refreshAuth(refreshToken);
 
-  setRefreshTokenCookie(res, auth.refreshToken);
+  setRefreshTokenCookie(
+    res,
+    auth.refreshToken,
+  );
 
   res.status(200).json({
     success: true,
@@ -110,16 +128,21 @@ export const refresh = async (
 export const getRefreshTokenFromCookie = (
   req: Request,
 ): string | undefined => {
-  return req.cookies?.[getRefreshTokenCookieName()];
+  return req.cookies?.[
+    getRefreshTokenCookieName()
+  ];
 };
 
 export const me = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const authenticatedReq = req as AuthenticatedRequest;
+  const authenticatedReq =
+    req as AuthenticatedRequest;
 
-  const user = await getCurrentUser(authenticatedReq.userId);
+  const user = await getCurrentUser(
+    authenticatedReq.userId,
+  );
 
   res.status(200).json({
     success: true,
@@ -133,7 +156,8 @@ export const logout = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const refreshToken = getRefreshTokenFromCookie(req);
+  const refreshToken =
+    getRefreshTokenFromCookie(req);
 
   if (refreshToken) {
     await logoutUser(refreshToken);
@@ -144,5 +168,48 @@ export const logout = async (
   res.status(200).json({
     success: true,
     message: 'Logged out successfully',
+  });
+};
+
+export const createToken = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const authenticatedReq =
+    req as AuthenticatedRequest;
+
+  const result =
+    createPersonalAccessTokenSchema.safeParse(
+      req.body,
+    );
+
+  if (!result.success) {
+    throw new AuthError(
+      'Validation failed',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const personalAccessToken =
+    await createPersonalAccessToken(
+      authenticatedReq.userId,
+      result.data.name,
+      result.data.expiresAt
+        ? new Date(result.data.expiresAt)
+        : null,
+    );
+
+  res.status(201).json({
+    success: true,
+    data: {
+      token: personalAccessToken.token,
+      id: personalAccessToken.id,
+      name: personalAccessToken.name,
+      expiresAt:
+        personalAccessToken.expiresAt,
+      createdAt:
+        personalAccessToken.createdAt,
+    },
   });
 };
