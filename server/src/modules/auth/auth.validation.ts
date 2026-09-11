@@ -41,5 +41,32 @@ export const loginSchema = z.object({
     .max(72, 'Password must be at most 72 characters'),
 });
 
-export type RegisterSchemaInput = z.infer<typeof registerSchema>;
-export type LoginSchemaInput = z.infer<typeof loginSchema>;
+export const createPersonalAccessTokenSchema =
+  z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, 'Token name is required')
+      .max(
+        100,
+        'Token name must be at most 100 characters',
+      ),
+
+    expiresAt: z
+      .string()
+      .datetime()
+      .optional(),
+  });
+
+export type RegisterSchemaInput = z.infer<
+  typeof registerSchema
+>;
+
+export type LoginSchemaInput = z.infer<
+  typeof loginSchema
+>;
+
+export type CreatePersonalAccessTokenSchemaInput =
+  z.infer<
+    typeof createPersonalAccessTokenSchema
+  >;
