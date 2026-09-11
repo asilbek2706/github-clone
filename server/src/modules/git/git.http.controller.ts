@@ -112,6 +112,29 @@ const getGitRepository = async (
   return repository;
 };
 
+const isGitWriteRequest = (
+  req: Request,
+): boolean => {
+  const service =
+    req.query.service;
+
+  if (
+    service ===
+    'git-receive-pack'
+  ) {
+    return true;
+  }
+
+  if (
+    req.path ===
+    '/git-receive-pack'
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 const authenticateGitRequest = async (
   req: Request,
 ): Promise<string> => {
@@ -167,50 +190,62 @@ export const gitHttpController = async (
   const pathInfo =
     `/${repositoryOwner}/${repositoryName}.git${req.path}`;
 
+  const writeRequest =
+    isGitWriteRequest(req);
+
+  const authenticationRequired =
+    gitRepository.isPrivate ||
+    writeRequest;
+
   console.log('[Git HTTP]', {
     method: req.method,
     path: req.path,
     username: repositoryOwner,
     repository: repositoryName,
     pathInfo,
+    isPrivate: gitRepository.isPrivate,
+    writeRequest,
+    authenticationRequired,
   });
 
-  try {
-    const authenticatedUsername =
-      await authenticateGitRequest(req);
+  if (authenticationRequired) {
+    try {
+      const authenticatedUsername =
+        await authenticateGitRequest(req);
 
-    if (
-      authenticatedUsername !==
-      repositoryOwner
-    ) {
-      throw new AuthError(
-        'Git credentials do not match repository owner',
-        403,
-        'GIT_USER_MISMATCH',
+      if (
+        authenticatedUsername !==
+        repositoryOwner
+      ) {
+        throw new AuthError(
+          'Git credentials do not match repository owner',
+          403,
+          'GIT_USER_MISMATCH',
+        );
+      }
+
+      console.log(
+        '[Git HTTP] Authenticated:',
+        authenticatedUsername,
       );
+    } catch (error) {
+      if (error instanceof AuthError) {
+        res.setHeader(
+          'WWW-Authenticate',
+          'Basic realm="GitZone"',
+        );
+
+        res.status(error.statusCode).json({
+          success: false,
+          message: error.message,
+          code: error.code,
+        });
+
+        return;
+      }
+
+      throw error;
     }
-
-    console.log(
-      '[Git HTTP] Authenticated:',
-      authenticatedUsername,
-    );
-  } catch (error) {
-    if (error instanceof AuthError) {
-      res.setHeader(
-        'WWW-Authenticate',
-        'Basic realm="GitZone"',
-      );
-
-      res.status(error.statusCode).json({
-        success: false,
-        message: error.message,
-        code: error.code,
-      });
-
-      return;
-    }
-
-    throw error;
   }
 
   const child = spawn(
