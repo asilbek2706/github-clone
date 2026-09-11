@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 
 import { AuthError } from '../auth/auth.errors.js';
 
@@ -50,4 +51,33 @@ export const createGitRepository = async (
   }
 
   return repositoryPath;
+};
+
+export const renameGitRepository = async (
+  username: string,
+  oldRepositoryName: string,
+  newRepositoryName: string,
+): Promise<void> => {
+  const oldRepositoryPath = getRepositoryPath(
+    username,
+    oldRepositoryName,
+  );
+
+  const newRepositoryPath = getRepositoryPath(
+    username,
+    newRepositoryName,
+  );
+
+  try {
+    await fs.rename(
+      oldRepositoryPath,
+      newRepositoryPath,
+    );
+  } catch {
+    throw new AuthError(
+      'Failed to rename Git repository',
+      500,
+      'GIT_REPOSITORY_RENAME_FAILED',
+    );
+  }
 };
