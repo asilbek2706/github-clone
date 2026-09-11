@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
+import prisma from '../../config/prisma.js';
 import { AuthError } from '../auth/auth.errors.js';
 import { verifyPersonalAccessToken } from '../auth/pat.service.js';
 
@@ -74,6 +75,43 @@ const parseBasicAuth = (
   }
 };
 
+const getGitRepository = async (
+  username: string,
+  repositoryName: string,
+) => {
+  const repository =
+    await prisma.repository.findFirst({
+      where: {
+        name: repositoryName,
+        owner: {
+          username,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        isPrivate: true,
+        defaultBranch: true,
+        owner: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+      },
+    });
+
+  if (!repository) {
+    throw new AuthError(
+      'Repository not found',
+      404,
+      'REPOSITORY_NOT_FOUND',
+    );
+  }
+
+  return repository;
+};
+
 const authenticateGitRequest = async (
   req: Request,
 ): Promise<string> => {
@@ -100,16 +138,40 @@ export const gitHttpController = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const { username, repository } = req.params;
+  const { username, repository } =
+    req.params;
+
+  if (
+    typeof username !== 'string' ||
+    typeof repository !== 'string'
+  ) {
+    throw new AuthError(
+      'Invalid Git repository path',
+      400,
+      'INVALID_GIT_REPOSITORY_PATH',
+    );
+  }
+
+  const gitRepository =
+    await getGitRepository(
+      username,
+      repository,
+    );
+
+  const repositoryOwner =
+    gitRepository.owner.username;
+
+  const repositoryName =
+    gitRepository.name;
 
   const pathInfo =
-    `/${username}/${repository}.git${req.path}`;
+    `/${repositoryOwner}/${repositoryName}.git${req.path}`;
 
   console.log('[Git HTTP]', {
     method: req.method,
     path: req.path,
-    username,
-    repository,
+    username: repositoryOwner,
+    repository: repositoryName,
     pathInfo,
   });
 
@@ -118,7 +180,8 @@ export const gitHttpController = async (
       await authenticateGitRequest(req);
 
     if (
-      authenticatedUsername !== username
+      authenticatedUsername !==
+      repositoryOwner
     ) {
       throw new AuthError(
         'Git credentials do not match repository owner',
@@ -167,7 +230,7 @@ export const gitHttpController = async (
           req.headers['content-type'] ?? '',
         CONTENT_LENGTH:
           req.headers['content-length'] ?? '',
-        REMOTE_USER: username,
+        REMOTE_USER: repositoryOwner,
       },
     },
   );
@@ -225,7 +288,9 @@ export const gitHttpController = async (
 
         const value =
           header
-            .slice(separatorIndex + 1)
+            .slice(
+              separatorIndex + 1,
+            )
             .trim();
 
         if (
