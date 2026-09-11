@@ -42,6 +42,14 @@ export const createGitRepository = async (
       '--initial-branch=main',
       repositoryPath,
     ]);
+
+    await execFileAsync('git', [
+      '--git-dir',
+      repositoryPath,
+      'config',
+      'http.receivepack',
+      'true',
+    ]);
   } catch {
     throw new AuthError(
       'Failed to create Git repository',
