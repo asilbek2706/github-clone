@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { authMiddleware } from '../../middleware/auth.middleware.js';
 import {
+  createToken,
   login, logout,
   me,
   refresh,
@@ -15,5 +16,6 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.post('/refresh', refresh);
 router.get('/me', authMiddleware, me);
+router.post('/tokens',  authMiddleware,  createToken);
 
 export default router;
