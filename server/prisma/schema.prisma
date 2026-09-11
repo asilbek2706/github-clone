@@ -18,6 +18,7 @@ model User {
 
   sessions     Session[]
   repositories Repository[]
+  personalAccessTokens PersonalAccessToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -37,6 +38,22 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model PersonalAccessToken {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  tokenPrefix String   @unique
+  tokenHash   String   @unique
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Repository {
