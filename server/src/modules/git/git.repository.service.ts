@@ -81,3 +81,26 @@ export const renameGitRepository = async (
     );
   }
 };
+
+export const deleteGitRepository = async (
+  username: string,
+  repositoryName: string,
+): Promise<void> => {
+  const repositoryPath = getRepositoryPath(
+    username,
+    repositoryName,
+  );
+
+  try {
+    await fs.rm(repositoryPath, {
+      recursive: true,
+      force: true,
+    });
+  } catch {
+    throw new AuthError(
+      'Failed to delete Git repository',
+      500,
+      'GIT_REPOSITORY_DELETE_FAILED',
+    );
+  }
+};

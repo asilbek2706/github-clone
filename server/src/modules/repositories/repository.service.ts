@@ -2,6 +2,7 @@ import prisma from '../../config/prisma.js';
 import { AuthError } from '../auth/auth.errors.js';
 import {
   createGitRepository,
+  deleteGitRepository,
   renameGitRepository,
 } from '../git/git.repository.service.js';
 import type {
@@ -195,29 +196,29 @@ export const updateRepository = async (
   }
 
   if (input.name && input.name !== repository.name) {
-  const existingRepository = await prisma.repository.findUnique({
-    where: {
-      ownerId_name: {
-        ownerId,
-        name: input.name,
+    const existingRepository = await prisma.repository.findUnique({
+      where: {
+        ownerId_name: {
+          ownerId,
+          name: input.name,
+        },
       },
-    },
-  });
+    });
 
-  if (existingRepository) {
-    throw new AuthError(
-      'Repository with this name already exists',
-      409,
-      'REPOSITORY_ALREADY_EXISTS',
+    if (existingRepository) {
+      throw new AuthError(
+        'Repository with this name already exists',
+        409,
+        'REPOSITORY_ALREADY_EXISTS',
+      );
+    }
+
+    await renameGitRepository(
+      username,
+      repository.name,
+      input.name,
     );
   }
-
-  await renameGitRepository(
-    username,
-    repository.name,
-    input.name,
-  );
-}
 
   const updatedRepository = await prisma.repository.update({
     where: {
@@ -268,6 +269,11 @@ export const deleteRepository = async (
       'REPOSITORY_FORBIDDEN',
     );
   }
+
+  await deleteGitRepository(
+    username,
+    repository.name,
+  );
 
   await prisma.repository.delete({
     where: {
