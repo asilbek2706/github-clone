@@ -2,127 +2,308 @@ import type { Request, Response } from 'express';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 
+import { AuthError } from '../auth/auth.errors.js';
+import { verifyPersonalAccessToken } from '../auth/pat.service.js';
+
 const storagePath = process.env.GIT_STORAGE_PATH;
 
 if (!storagePath) {
   throw new Error('GIT_STORAGE_PATH is not defined');
 }
 
-const GIT_PROJECT_ROOT = path.resolve(process.cwd(), storagePath);
+const GIT_PROJECT_ROOT = path.resolve(
+  process.cwd(),
+  storagePath,
+);
 
-export const gitHttpController = (
+const parseBasicAuth = (
+  req: Request,
+): {
+  username: string;
+  password: string;
+} | null => {
+  const authorization =
+    req.headers.authorization;
+
+  if (!authorization) {
+    return null;
+  }
+
+  if (!authorization.startsWith('Basic ')) {
+    return null;
+  }
+
+  const encodedCredentials =
+    authorization.slice('Basic '.length);
+
+  try {
+    const decodedCredentials =
+      Buffer.from(
+        encodedCredentials,
+        'base64',
+      ).toString('utf8');
+
+    const separatorIndex =
+      decodedCredentials.indexOf(':');
+
+    if (separatorIndex === -1) {
+      return null;
+    }
+
+    const username =
+      decodedCredentials.slice(
+        0,
+        separatorIndex,
+      );
+
+    const password =
+      decodedCredentials.slice(
+        separatorIndex + 1,
+      );
+
+    if (!username || !password) {
+      return null;
+    }
+
+    return {
+      username,
+      password,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const authenticateGitRequest = async (
+  req: Request,
+): Promise<string> => {
+  const credentials = parseBasicAuth(req);
+
+  if (!credentials) {
+    throw new AuthError(
+      'Git username and personal access token are required',
+      401,
+      'GIT_AUTH_REQUIRED',
+    );
+  }
+
+  const result =
+    await verifyPersonalAccessToken(
+      credentials.username,
+      credentials.password,
+    );
+
+  return result.username;
+};
+
+export const gitHttpController = async (
   req: Request,
   res: Response,
-): void => {
+): Promise<void> => {
   const { username, repository } = req.params;
 
-  const pathInfo = `/${username}/${repository}.git${req.path}`;
+  const pathInfo =
+    `/${username}/${repository}.git${req.path}`;
 
   console.log('[Git HTTP]', {
-  method: req.method,
-  path: req.path,
-  originalUrl: req.originalUrl,
-  username,
-  repository,
-  pathInfo,
-  gitProjectRoot: GIT_PROJECT_ROOT,
-});
-
-  const child = spawn('/usr/lib/git-core/git-http-backend', [], {
-    env: {
-      ...process.env,
-      GIT_PROJECT_ROOT,
-      PATH_INFO: pathInfo,
-      REQUEST_METHOD: req.method,
-      QUERY_STRING: req.originalUrl.split('?')[1] ?? '',
-      CONTENT_TYPE: req.headers['content-type'] ?? '',
-      CONTENT_LENGTH: req.headers['content-length'] ?? '',
-      REMOTE_USER: '',
-    },
+    method: req.method,
+    path: req.path,
+    username,
+    repository,
+    pathInfo,
   });
+
+  try {
+    const authenticatedUsername =
+      await authenticateGitRequest(req);
+
+    if (
+      authenticatedUsername !== username
+    ) {
+      throw new AuthError(
+        'Git credentials do not match repository owner',
+        403,
+        'GIT_USER_MISMATCH',
+      );
+    }
+
+    console.log(
+      '[Git HTTP] Authenticated:',
+      authenticatedUsername,
+    );
+  } catch (error) {
+    if (error instanceof AuthError) {
+      res.setHeader(
+        'WWW-Authenticate',
+        'Basic realm="GitZone"',
+      );
+
+      res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+
+      return;
+    }
+
+    throw error;
+  }
+
+  const child = spawn(
+    '/usr/lib/git-core/git-http-backend',
+    [],
+    {
+      env: {
+        ...process.env,
+        GIT_PROJECT_ROOT:
+          GIT_PROJECT_ROOT,
+        GIT_HTTP_EXPORT_ALL: '1',
+        PATH_INFO: pathInfo,
+        REQUEST_METHOD: req.method,
+        QUERY_STRING:
+          req.originalUrl.split('?')[1] ?? '',
+        CONTENT_TYPE:
+          req.headers['content-type'] ?? '',
+        CONTENT_LENGTH:
+          req.headers['content-length'] ?? '',
+        REMOTE_USER: username,
+      },
+    },
+  );
 
   let headersSent = false;
-  let headerBuffer = '';
+  let headerBuffer = Buffer.alloc(0);
 
-  child.stdout.on('data', (chunk: Buffer) => {
-    if (headersSent) {
-      res.write(chunk);
-      return;
-    }
-
-    headerBuffer += chunk.toString();
-
-    const headerEnd = headerBuffer.indexOf('\r\n\r\n');
-
-    if (headerEnd === -1) {
-      return;
-    }
-
-    const rawHeaders = headerBuffer.slice(0, headerEnd);
-    const body = Buffer.from(
-      headerBuffer.slice(headerEnd + 4),
-    );
-
-    const headers = rawHeaders.split('\r\n');
-
-    for (const header of headers) {
-      const separatorIndex = header.indexOf(':');
-
-      if (separatorIndex === -1) {
-        continue;
+  child.stdout.on(
+    'data',
+    (chunk: Buffer) => {
+      if (headersSent) {
+        res.write(chunk);
+        return;
       }
 
-      const name = header.slice(0, separatorIndex).trim();
-      const value = header.slice(separatorIndex + 1).trim();
+      headerBuffer = Buffer.concat([
+        headerBuffer,
+        chunk,
+      ]);
 
-      if (name.toLowerCase() === 'status') {
-        const statusCode = Number.parseInt(value, 10);
+      const headerEnd =
+        headerBuffer.indexOf(
+          Buffer.from('\r\n\r\n'),
+        );
 
-        if (!Number.isNaN(statusCode)) {
-          res.status(statusCode);
+      if (headerEnd === -1) {
+        return;
+      }
+
+      const rawHeaders =
+        headerBuffer
+          .subarray(0, headerEnd)
+          .toString('utf8');
+
+      const body =
+        headerBuffer.subarray(
+          headerEnd + 4,
+        );
+
+      const headers =
+        rawHeaders.split('\r\n');
+
+      for (const header of headers) {
+        const separatorIndex =
+          header.indexOf(':');
+
+        if (separatorIndex === -1) {
+          continue;
         }
-      } else {
-        res.setHeader(name, value);
-      }
-    }
 
-    headersSent = true;
+        const name =
+          header
+            .slice(0, separatorIndex)
+            .trim();
 
-    if (body.length > 0) {
-      res.write(body);
-    }
-  });
+        const value =
+          header
+            .slice(separatorIndex + 1)
+            .trim();
 
-  child.stderr.on('data', (chunk: Buffer) => {
-    console.error(
-      '[git-http-backend]',
-      chunk.toString(),
-    );
-  });
+        if (
+          name.toLowerCase() ===
+          'status'
+        ) {
+          const statusCode =
+            Number.parseInt(
+              value,
+              10,
+            );
 
-  child.on('error', (error) => {
-    console.error(
-      '[git-http-backend] process error:',
-      error,
-    );
-
-    if (!res.headersSent) {
-      res.status(500).json({
-        success: false,
-        message: 'Git HTTP backend error',
-      });
-    }
-  });
-
-  child.on('close', (code) => {
-    if (!res.writableEnded) {
-      if (code !== 0 && !res.headersSent) {
-        res.status(500);
+          if (
+            !Number.isNaN(
+              statusCode,
+            )
+          ) {
+            res.status(statusCode);
+          }
+        } else {
+          res.setHeader(
+            name,
+            value,
+          );
+        }
       }
 
-      res.end();
-    }
-  });
+      headersSent = true;
+
+      if (body.length > 0) {
+        res.write(body);
+      }
+    },
+  );
+
+  child.stderr.on(
+    'data',
+    (chunk: Buffer) => {
+      console.error(
+        '[git-http-backend]',
+        chunk.toString(),
+      );
+    },
+  );
+
+  child.on(
+    'error',
+    (error) => {
+      console.error(
+        '[git-http-backend] process error:',
+        error,
+      );
+
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message:
+            'Git HTTP backend error',
+        });
+      }
+    },
+  );
+
+  child.on(
+    'close',
+    (code) => {
+      if (!res.writableEnded) {
+        if (
+          code !== 0 &&
+          !res.headersSent
+        ) {
+          res.status(500);
+        }
+
+        res.end();
+      }
+    },
+  );
 
   req.pipe(child.stdin);
 };
