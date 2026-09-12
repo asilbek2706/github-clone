@@ -12,10 +12,12 @@ import {
 import {
   addRepositoryCollaborator,
   getRepositoryCollaborators,
+  updateRepositoryCollaborator,
 } from './repository.collaborator.service.js';
 import {
   addRepositoryCollaboratorSchema,
   createRepositorySchema,
+    updateRepositoryCollaboratorSchema,
   updateRepositorySchema,
 } from './repository.validation.js';
 
@@ -257,6 +259,61 @@ export const listCollaborators = async (
     success: true,
     data: {
       collaborators,
+    },
+  });
+};
+
+export const updateCollaborator = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const authenticatedReq =
+    req as AuthenticatedRequest;
+
+  const {
+    username,
+    name,
+    collaboratorUsername,
+  } = req.params;
+
+  if (
+    typeof username !== 'string' ||
+    typeof name !== 'string' ||
+    typeof collaboratorUsername !== 'string'
+  ) {
+    throw new AuthError(
+      'Username, repository name and collaborator username are required',
+      400,
+      'INVALID_COLLABORATOR_PARAMS',
+    );
+  }
+
+  const parsed =
+    updateRepositoryCollaboratorSchema.safeParse(
+      req.body,
+    );
+
+  if (!parsed.success) {
+    throw new AuthError(
+      'Invalid collaborator data',
+      400,
+      'INVALID_COLLABORATOR_DATA',
+    );
+  }
+
+  const collaborator =
+    await updateRepositoryCollaborator(
+      authenticatedReq.userId,
+      username,
+      name,
+      collaboratorUsername,
+      parsed.data.permission,
+    );
+
+  res.status(200).json({
+    success: true,
+    data: {
+      collaborator,
     },
   });
 };
