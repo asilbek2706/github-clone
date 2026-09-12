@@ -264,3 +264,63 @@ export const updateRepositoryCollaborator =
 
     return collaborator;
   };
+
+export const removeRepositoryCollaborator =
+  async (
+    ownerId: string,
+    username: string,
+    repositoryName: string,
+    collaboratorUsername: string,
+  ): Promise<void> => {
+    const repository =
+      await getOwnedRepository(
+        ownerId,
+        username,
+        repositoryName,
+      );
+
+    const collaboratorUser =
+      await prisma.user.findUnique({
+        where: {
+          username: collaboratorUsername,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!collaboratorUser) {
+      throw new AuthError(
+        'Collaborator user not found',
+        404,
+        'COLLABORATOR_USER_NOT_FOUND',
+      );
+    }
+
+    const collaborator =
+      await prisma.repositoryCollaborator.findUnique({
+        where: {
+          repositoryId_userId: {
+            repositoryId: repository.id,
+            userId: collaboratorUser.id,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!collaborator) {
+      throw new AuthError(
+        'Repository collaborator not found',
+        404,
+        'COLLABORATOR_NOT_FOUND',
+      );
+    }
+
+    await prisma.repositoryCollaborator.delete({
+      where: {
+        id: collaborator.id,
+      },
+    });
+  };
