@@ -10,9 +10,15 @@ import {
   updateRepository,
 } from './repository.service.js';
 import {
+  addRepositoryCollaborator,
+  getRepositoryCollaborators,
+} from './repository.collaborator.service.js';
+import {
+  addRepositoryCollaboratorSchema,
   createRepositorySchema,
   updateRepositorySchema,
 } from './repository.validation.js';
+
 
 export const create = async (
   req: Request,
@@ -167,5 +173,90 @@ export const remove = async (
   res.status(200).json({
     success: true,
     message: 'Repository deleted successfully',
+  });
+};
+
+export const addCollaborator = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const authenticatedReq =
+    req as AuthenticatedRequest;
+
+  const { username, name } = req.params;
+
+  if (
+    typeof username !== 'string' ||
+    typeof name !== 'string'
+  ) {
+    throw new AuthError(
+      'Username and repository name are required',
+      400,
+      'INVALID_REPOSITORY_PARAMS',
+    );
+  }
+
+  const parsed =
+    addRepositoryCollaboratorSchema.safeParse(
+      req.body,
+    );
+
+  if (!parsed.success) {
+    throw new AuthError(
+      'Invalid collaborator data',
+      400,
+      'INVALID_COLLABORATOR_DATA',
+    );
+  }
+
+  const collaborator =
+    await addRepositoryCollaborator(
+      authenticatedReq.userId,
+      username,
+      name,
+      parsed.data.username,
+      parsed.data.permission,
+    );
+
+  res.status(201).json({
+    success: true,
+    data: {
+      collaborator,
+    },
+  });
+};
+
+export const listCollaborators = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const authenticatedReq =
+    req as AuthenticatedRequest;
+
+  const { username, name } = req.params;
+
+  if (
+    typeof username !== 'string' ||
+    typeof name !== 'string'
+  ) {
+    throw new AuthError(
+      'Username and repository name are required',
+      400,
+      'INVALID_REPOSITORY_PARAMS',
+    );
+  }
+
+  const collaborators =
+    await getRepositoryCollaborators(
+      authenticatedReq.userId,
+      username,
+      name,
+    );
+
+  res.status(200).json({
+    success: true,
+    data: {
+      collaborators,
+    },
   });
 };
