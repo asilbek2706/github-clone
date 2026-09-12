@@ -49,3 +49,37 @@ export type CreateRepositoryInput = z.infer<
 export type UpdateRepositoryInput = z.infer<
   typeof updateRepositorySchema
 >;
+
+export const addRepositoryCollaboratorSchema =
+  z.object({
+    username: z
+      .string()
+      .trim()
+      .min(
+        1,
+        'Collaborator username is required',
+      ),
+
+    permission: z.enum([
+      'READ',
+      'WRITE',
+    ]),
+  });
+
+export const updateRepositoryCollaboratorSchema =
+  z.object({
+    permission: z.enum([
+      'READ',
+      'WRITE',
+    ]),
+  });
+
+export type AddRepositoryCollaboratorInput =
+  z.infer<
+    typeof addRepositoryCollaboratorSchema
+  >;
+
+export type UpdateRepositoryCollaboratorInput =
+  z.infer<
+    typeof updateRepositoryCollaboratorSchema
+  >;
