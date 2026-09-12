@@ -9,6 +9,7 @@ import {
   listCollaborators,
   remove,
   update,
+  updateCollaborator,
 } from './repository.controller.js';
 
 const router = Router();
@@ -16,6 +17,7 @@ const router = Router();
 router.post('/', authMiddleware, create);
 router.post('/:username/:name/collaborators',  authMiddleware,  addCollaborator,);
 router.get('/:username/:name/collaborators',  authMiddleware,  listCollaborators,);
+router.patch('/:username/:name/collaborators/:collaboratorUsername', authMiddleware,  updateCollaborator,);
 router.get('/:username', listByUsername);
 router.get('/:username/:name', getOne);
 router.patch('/:username/:name', authMiddleware, update);
