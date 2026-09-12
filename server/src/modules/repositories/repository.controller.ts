@@ -13,6 +13,7 @@ import {
   addRepositoryCollaborator,
   getRepositoryCollaborators,
   updateRepositoryCollaborator,
+  removeRepositoryCollaborator
 } from './repository.collaborator.service.js';
 import {
   addRepositoryCollaboratorSchema,
@@ -315,5 +316,43 @@ export const updateCollaborator = async (
     data: {
       collaborator,
     },
+  });
+};
+
+export const removeCollaborator = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const authenticatedReq =
+    req as AuthenticatedRequest;
+
+  const {
+    username,
+    name,
+    collaboratorUsername,
+  } = req.params;
+
+  if (
+    typeof username !== 'string' ||
+    typeof name !== 'string' ||
+    typeof collaboratorUsername !== 'string'
+  ) {
+    throw new AuthError(
+      'Username, repository name and collaborator username are required',
+      400,
+      'INVALID_COLLABORATOR_PARAMS',
+    );
+  }
+
+  await removeRepositoryCollaborator(
+    authenticatedReq.userId,
+    username,
+    name,
+    collaboratorUsername,
+  );
+
+  res.status(200).json({
+    success: true,
+    message: 'Repository collaborator removed successfully',
   });
 };
