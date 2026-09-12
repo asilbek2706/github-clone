@@ -5,6 +5,10 @@ import path from 'node:path';
 import prisma from '../../config/prisma.js';
 import { AuthError } from '../auth/auth.errors.js';
 import { verifyPersonalAccessToken } from '../auth/pat.service.js';
+import {
+  authorizeRepositoryAccess,
+  type RepositoryAccessType,
+} from '../repositories/repository.authorization.service.js';
 
 const storagePath = process.env.GIT_STORAGE_PATH;
 
@@ -119,15 +123,13 @@ const isGitWriteRequest = (
     req.query.service;
 
   if (
-    service ===
-    'git-receive-pack'
+    service === 'git-receive-pack'
   ) {
     return true;
   }
 
   if (
-    req.path ===
-    '/git-receive-pack'
+    req.path === '/git-receive-pack'
   ) {
     return true;
   }
@@ -137,8 +139,12 @@ const isGitWriteRequest = (
 
 const authenticateGitRequest = async (
   req: Request,
-): Promise<string> => {
-  const credentials = parseBasicAuth(req);
+): Promise<{
+  userId: string;
+  username: string;
+}> => {
+  const credentials =
+    parseBasicAuth(req);
 
   if (!credentials) {
     throw new AuthError(
@@ -148,13 +154,10 @@ const authenticateGitRequest = async (
     );
   }
 
-  const result =
-    await verifyPersonalAccessToken(
-      credentials.username,
-      credentials.password,
-    );
-
-  return result.username;
+  return verifyPersonalAccessToken(
+    credentials.username,
+    credentials.password,
+  );
 };
 
 export const gitHttpController = async (
@@ -193,6 +196,11 @@ export const gitHttpController = async (
   const writeRequest =
     isGitWriteRequest(req);
 
+  const accessType: RepositoryAccessType =
+    writeRequest
+      ? 'WRITE'
+      : 'READ';
+
   const authenticationRequired =
     gitRepository.isPrivate ||
     writeRequest;
@@ -208,44 +216,58 @@ export const gitHttpController = async (
     authenticationRequired,
   });
 
-  if (authenticationRequired) {
-    try {
-      const authenticatedUsername =
+  try {
+    if (authenticationRequired) {
+      const authenticatedUser =
         await authenticateGitRequest(req);
 
-      if (
-        authenticatedUsername !==
-        repositoryOwner
-      ) {
-        throw new AuthError(
-          'Git credentials do not match repository owner',
-          403,
-          'GIT_USER_MISMATCH',
+      const access =
+        await authorizeRepositoryAccess(
+          gitRepository.id,
+          accessType,
+          authenticatedUser.userId,
         );
-      }
 
       console.log(
         '[Git HTTP] Authenticated:',
-        authenticatedUsername,
+        authenticatedUser.username,
       );
-    } catch (error) {
-      if (error instanceof AuthError) {
+
+      console.log(
+        '[Git HTTP] Access:',
+        access.permission,
+      );
+    } else {
+      const access =
+        await authorizeRepositoryAccess(
+          gitRepository.id,
+          accessType,
+        );
+
+      console.log(
+        '[Git HTTP] Access:',
+        access.permission,
+      );
+    }
+  } catch (error) {
+    if (error instanceof AuthError) {
+      if (error.statusCode === 401) {
         res.setHeader(
           'WWW-Authenticate',
           'Basic realm="GitZone"',
         );
-
-        res.status(error.statusCode).json({
-          success: false,
-          message: error.message,
-          code: error.code,
-        });
-
-        return;
       }
 
-      throw error;
+      res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        code: error.code,
+      });
+
+      return;
     }
+
+    throw error;
   }
 
   const child = spawn(
@@ -254,8 +276,7 @@ export const gitHttpController = async (
     {
       env: {
         ...process.env,
-        GIT_PROJECT_ROOT:
-          GIT_PROJECT_ROOT,
+        GIT_PROJECT_ROOT,
         GIT_HTTP_EXPORT_ALL: '1',
         PATH_INFO: pathInfo,
         REQUEST_METHOD: req.method,
@@ -271,7 +292,8 @@ export const gitHttpController = async (
   );
 
   let headersSent = false;
-  let headerBuffer = Buffer.alloc(0);
+  let headerBuffer =
+    Buffer.alloc(0);
 
   child.stdout.on(
     'data',
@@ -281,10 +303,11 @@ export const gitHttpController = async (
         return;
       }
 
-      headerBuffer = Buffer.concat([
-        headerBuffer,
-        chunk,
-      ]);
+      headerBuffer =
+        Buffer.concat([
+          headerBuffer,
+          chunk,
+        ]);
 
       const headerEnd =
         headerBuffer.indexOf(
@@ -318,7 +341,10 @@ export const gitHttpController = async (
 
         const name =
           header
-            .slice(0, separatorIndex)
+            .slice(
+              0,
+              separatorIndex,
+            )
             .trim();
 
         const value =
@@ -329,8 +355,7 @@ export const gitHttpController = async (
             .trim();
 
         if (
-          name.toLowerCase() ===
-          'status'
+          name.toLowerCase() === 'status'
         ) {
           const statusCode =
             Number.parseInt(
@@ -339,9 +364,7 @@ export const gitHttpController = async (
             );
 
           if (
-            !Number.isNaN(
-              statusCode,
-            )
+            !Number.isNaN(statusCode)
           ) {
             res.status(statusCode);
           }
