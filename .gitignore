@@ -6,7 +6,8 @@ build/
 !.env.example
 
 coverage/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 
 *.log

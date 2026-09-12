@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+coverage
+
+client/node_modules
+client/dist
+
+server/node_modules
+server/dist
+server/generated
+server/storage
+server/coverage
+
+.env
+.env.*
+package-lock.json
