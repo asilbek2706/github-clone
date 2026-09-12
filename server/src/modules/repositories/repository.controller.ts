@@ -13,36 +13,25 @@ import {
   addRepositoryCollaborator,
   getRepositoryCollaborators,
   updateRepositoryCollaborator,
-  removeRepositoryCollaborator
+  removeRepositoryCollaborator,
 } from './repository.collaborator.service.js';
 import {
   addRepositoryCollaboratorSchema,
   createRepositorySchema,
-    updateRepositoryCollaboratorSchema,
+  updateRepositoryCollaboratorSchema,
   updateRepositorySchema,
 } from './repository.validation.js';
 
-
-export const create = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const create = async (req: Request, res: Response): Promise<void> => {
   const authenticatedReq = req as AuthenticatedRequest;
 
   const parsed = createRepositorySchema.safeParse(req.body);
 
   if (!parsed.success) {
-    throw new AuthError(
-      'Invalid repository data',
-      400,
-      'INVALID_REPOSITORY_DATA',
-    );
+    throw new AuthError('Invalid repository data', 400, 'INVALID_REPOSITORY_DATA');
   }
 
-  const repository = await createRepository(
-    authenticatedReq.userId,
-    parsed.data,
-  );
+  const repository = await createRepository(authenticatedReq.userId, parsed.data);
 
   res.status(201).json({
     success: true,
@@ -52,18 +41,11 @@ export const create = async (
   });
 };
 
-export const listByUsername = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const listByUsername = async (req: Request, res: Response): Promise<void> => {
   const { username } = req.params;
 
   if (typeof username !== 'string') {
-    throw new AuthError(
-      'Username is required',
-      400,
-      'INVALID_USERNAME',
-    );
+    throw new AuthError('Username is required', 400, 'INVALID_USERNAME');
   }
 
   const repositories = await getUserRepositories(username);
@@ -76,16 +58,10 @@ export const listByUsername = async (
   });
 };
 
-export const getOne = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const getOne = async (req: Request, res: Response): Promise<void> => {
   const { username, name } = req.params;
 
-  if (
-    typeof username !== 'string' ||
-    typeof name !== 'string'
-  ) {
+  if (typeof username !== 'string' || typeof name !== 'string') {
     throw new AuthError(
       'Username and repository name are required',
       400,
@@ -93,10 +69,7 @@ export const getOne = async (
     );
   }
 
-  const repository = await getRepositoryByUsernameAndName(
-    username,
-    name,
-  );
+  const repository = await getRepositoryByUsernameAndName(username, name);
 
   res.status(200).json({
     success: true,
@@ -106,17 +79,11 @@ export const getOne = async (
   });
 };
 
-export const update = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const update = async (req: Request, res: Response): Promise<void> => {
   const authenticatedReq = req as AuthenticatedRequest;
   const { username, name } = req.params;
 
-  if (
-    typeof username !== 'string' ||
-    typeof name !== 'string'
-  ) {
+  if (typeof username !== 'string' || typeof name !== 'string') {
     throw new AuthError(
       'Username and repository name are required',
       400,
@@ -127,19 +94,10 @@ export const update = async (
   const parsed = updateRepositorySchema.safeParse(req.body);
 
   if (!parsed.success) {
-    throw new AuthError(
-      'Invalid repository data',
-      400,
-      'INVALID_REPOSITORY_DATA',
-    );
+    throw new AuthError('Invalid repository data', 400, 'INVALID_REPOSITORY_DATA');
   }
 
-  const repository = await updateRepository(
-    authenticatedReq.userId,
-    username,
-    name,
-    parsed.data,
-  );
+  const repository = await updateRepository(authenticatedReq.userId, username, name, parsed.data);
 
   res.status(200).json({
     success: true,
@@ -149,17 +107,11 @@ export const update = async (
   });
 };
 
-export const remove = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const remove = async (req: Request, res: Response): Promise<void> => {
   const authenticatedReq = req as AuthenticatedRequest;
   const { username, name } = req.params;
 
-  if (
-    typeof username !== 'string' ||
-    typeof name !== 'string'
-  ) {
+  if (typeof username !== 'string' || typeof name !== 'string') {
     throw new AuthError(
       'Username and repository name are required',
       400,
@@ -167,11 +119,7 @@ export const remove = async (
     );
   }
 
-  await deleteRepository(
-    authenticatedReq.userId,
-    username,
-    name,
-  );
+  await deleteRepository(authenticatedReq.userId, username, name);
 
   res.status(200).json({
     success: true,
@@ -179,19 +127,12 @@ export const remove = async (
   });
 };
 
-export const addCollaborator = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const authenticatedReq =
-    req as AuthenticatedRequest;
+export const addCollaborator = async (req: Request, res: Response): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
 
   const { username, name } = req.params;
 
-  if (
-    typeof username !== 'string' ||
-    typeof name !== 'string'
-  ) {
+  if (typeof username !== 'string' || typeof name !== 'string') {
     throw new AuthError(
       'Username and repository name are required',
       400,
@@ -199,27 +140,19 @@ export const addCollaborator = async (
     );
   }
 
-  const parsed =
-    addRepositoryCollaboratorSchema.safeParse(
-      req.body,
-    );
+  const parsed = addRepositoryCollaboratorSchema.safeParse(req.body);
 
   if (!parsed.success) {
-    throw new AuthError(
-      'Invalid collaborator data',
-      400,
-      'INVALID_COLLABORATOR_DATA',
-    );
+    throw new AuthError('Invalid collaborator data', 400, 'INVALID_COLLABORATOR_DATA');
   }
 
-  const collaborator =
-    await addRepositoryCollaborator(
-      authenticatedReq.userId,
-      username,
-      name,
-      parsed.data.username,
-      parsed.data.permission,
-    );
+  const collaborator = await addRepositoryCollaborator(
+    authenticatedReq.userId,
+    username,
+    name,
+    parsed.data.username,
+    parsed.data.permission,
+  );
 
   res.status(201).json({
     success: true,
@@ -229,19 +162,12 @@ export const addCollaborator = async (
   });
 };
 
-export const listCollaborators = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const authenticatedReq =
-    req as AuthenticatedRequest;
+export const listCollaborators = async (req: Request, res: Response): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
 
   const { username, name } = req.params;
 
-  if (
-    typeof username !== 'string' ||
-    typeof name !== 'string'
-  ) {
+  if (typeof username !== 'string' || typeof name !== 'string') {
     throw new AuthError(
       'Username and repository name are required',
       400,
@@ -249,12 +175,7 @@ export const listCollaborators = async (
     );
   }
 
-  const collaborators =
-    await getRepositoryCollaborators(
-      authenticatedReq.userId,
-      username,
-      name,
-    );
+  const collaborators = await getRepositoryCollaborators(authenticatedReq.userId, username, name);
 
   res.status(200).json({
     success: true,
@@ -264,18 +185,10 @@ export const listCollaborators = async (
   });
 };
 
-export const updateCollaborator = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const authenticatedReq =
-    req as AuthenticatedRequest;
+export const updateCollaborator = async (req: Request, res: Response): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
 
-  const {
-    username,
-    name,
-    collaboratorUsername,
-  } = req.params;
+  const { username, name, collaboratorUsername } = req.params;
 
   if (
     typeof username !== 'string' ||
@@ -289,27 +202,19 @@ export const updateCollaborator = async (
     );
   }
 
-  const parsed =
-    updateRepositoryCollaboratorSchema.safeParse(
-      req.body,
-    );
+  const parsed = updateRepositoryCollaboratorSchema.safeParse(req.body);
 
   if (!parsed.success) {
-    throw new AuthError(
-      'Invalid collaborator data',
-      400,
-      'INVALID_COLLABORATOR_DATA',
-    );
+    throw new AuthError('Invalid collaborator data', 400, 'INVALID_COLLABORATOR_DATA');
   }
 
-  const collaborator =
-    await updateRepositoryCollaborator(
-      authenticatedReq.userId,
-      username,
-      name,
-      collaboratorUsername,
-      parsed.data.permission,
-    );
+  const collaborator = await updateRepositoryCollaborator(
+    authenticatedReq.userId,
+    username,
+    name,
+    collaboratorUsername,
+    parsed.data.permission,
+  );
 
   res.status(200).json({
     success: true,
@@ -319,18 +224,10 @@ export const updateCollaborator = async (
   });
 };
 
-export const removeCollaborator = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const authenticatedReq =
-    req as AuthenticatedRequest;
+export const removeCollaborator = async (req: Request, res: Response): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
 
-  const {
-    username,
-    name,
-    collaboratorUsername,
-  } = req.params;
+  const { username, name, collaboratorUsername } = req.params;
 
   if (
     typeof username !== 'string' ||
@@ -344,12 +241,7 @@ export const removeCollaborator = async (
     );
   }
 
-  await removeRepositoryCollaborator(
-    authenticatedReq.userId,
-    username,
-    name,
-    collaboratorUsername,
-  );
+  await removeRepositoryCollaborator(authenticatedReq.userId, username, name, collaboratorUsername);
 
   res.status(200).json({
     success: true,

@@ -6,19 +6,12 @@ import { AuthError } from './auth.errors.js';
 const PAT_PREFIX = 'gzp_';
 const TOKEN_BYTES = 32;
 
-const hashPersonalAccessToken = (
-  token: string,
-): string => {
-  return crypto
-    .createHash('sha256')
-    .update(token)
-    .digest('hex');
+const hashPersonalAccessToken = (token: string): string => {
+  return crypto.createHash('sha256').update(token).digest('hex');
 };
 
 const generatePersonalAccessToken = (): string => {
-  const randomToken = crypto
-    .randomBytes(TOKEN_BYTES)
-    .toString('base64url');
+  const randomToken = crypto.randomBytes(TOKEN_BYTES).toString('base64url');
 
   return `${PAT_PREFIX}${randomToken}`;
 };
@@ -36,25 +29,19 @@ export const createPersonalAccessToken = async (
 }> => {
   const token = generatePersonalAccessToken();
 
-  const tokenPrefix = token.slice(
-    0,
-    12,
-  );
+  const tokenPrefix = token.slice(0, 12);
 
-  const tokenHash = hashPersonalAccessToken(
-    token,
-  );
+  const tokenHash = hashPersonalAccessToken(token);
 
-  const personalAccessToken =
-    await prisma.personalAccessToken.create({
-      data: {
-        userId,
-        name,
-        tokenPrefix,
-        tokenHash,
-        expiresAt: expiresAt ?? null,
-      },
-    });
+  const personalAccessToken = await prisma.personalAccessToken.create({
+    data: {
+      userId,
+      name,
+      tokenPrefix,
+      tokenHash,
+      expiresAt: expiresAt ?? null,
+    },
+  });
 
   return {
     id: personalAccessToken.id,
@@ -90,17 +77,13 @@ export const verifyPersonalAccessToken = async (
     );
   }
 
-  const tokenPrefix = token.slice(
-    0,
-    12,
-  );
+  const tokenPrefix = token.slice(0, 12);
 
-  const personalAccessToken =
-    await prisma.personalAccessToken.findUnique({
-      where: {
-        tokenPrefix,
-      },
-    });
+  const personalAccessToken = await prisma.personalAccessToken.findUnique({
+    where: {
+      tokenPrefix,
+    },
+  });
 
   if (!personalAccessToken) {
     throw new AuthError(
@@ -110,14 +93,9 @@ export const verifyPersonalAccessToken = async (
     );
   }
 
-  const tokenHash = hashPersonalAccessToken(
-    token,
-  );
+  const tokenHash = hashPersonalAccessToken(token);
 
-  if (
-    personalAccessToken.tokenHash !==
-    tokenHash
-  ) {
+  if (personalAccessToken.tokenHash !== tokenHash) {
     throw new AuthError(
       'Invalid username or personal access token',
       401,
@@ -125,9 +103,7 @@ export const verifyPersonalAccessToken = async (
     );
   }
 
-  if (
-    personalAccessToken.userId !== user.id
-  ) {
+  if (personalAccessToken.userId !== user.id) {
     throw new AuthError(
       'Invalid username or personal access token',
       401,
@@ -135,15 +111,8 @@ export const verifyPersonalAccessToken = async (
     );
   }
 
-  if (
-    personalAccessToken.expiresAt !== null &&
-    personalAccessToken.expiresAt <= new Date()
-  ) {
-    throw new AuthError(
-      'Personal access token has expired',
-      401,
-      'GIT_TOKEN_EXPIRED',
-    );
+  if (personalAccessToken.expiresAt !== null && personalAccessToken.expiresAt <= new Date()) {
+    throw new AuthError('Personal access token has expired', 401, 'GIT_TOKEN_EXPIRED');
   }
 
   await prisma.personalAccessToken.update({

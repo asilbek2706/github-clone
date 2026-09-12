@@ -1,11 +1,5 @@
 import request from 'supertest';
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import app from '../../../src/app.js';
 
@@ -17,52 +11,35 @@ import {
   registerUser,
 } from '../../../src/modules/auth/auth.service.js';
 
-import {
-  verifyAccessToken,
-} from '../../../src/modules/auth/auth.tokens.js';
+import { verifyAccessToken } from '../../../src/modules/auth/auth.tokens.js';
 
-vi.mock(
-  '../../../src/modules/auth/auth.service.js',
-  () => ({
-    registerUser: vi.fn(),
-    loginUser: vi.fn(),
-    refreshAuth: vi.fn(),
-    getCurrentUser: vi.fn(),
-    logoutUser: vi.fn(),
-  }),
-);
+vi.mock('../../../src/modules/auth/auth.service.js', () => ({
+  registerUser: vi.fn(),
+  loginUser: vi.fn(),
+  refreshAuth: vi.fn(),
+  getCurrentUser: vi.fn(),
+  logoutUser: vi.fn(),
+}));
 
-vi.mock(
-  '../../../src/modules/auth/auth.tokens.js',
-  () => ({
-    verifyAccessToken: vi.fn(),
-  }),
-);
+vi.mock('../../../src/modules/auth/auth.tokens.js', () => ({
+  verifyAccessToken: vi.fn(),
+}));
 
-vi.mock(
-  '../../../src/modules/git/git.http.controller.js',
-  () => ({
-    gitHttpController: vi.fn(),
-  }),
-);
+vi.mock('../../../src/modules/git/git.http.controller.js', () => ({
+  gitHttpController: vi.fn(),
+}));
 
-const mockedRegisterUser =
-  vi.mocked(registerUser);
+const mockedRegisterUser = vi.mocked(registerUser);
 
-const mockedLoginUser =
-  vi.mocked(loginUser);
+const mockedLoginUser = vi.mocked(loginUser);
 
-const mockedRefreshAuth =
-  vi.mocked(refreshAuth);
+const mockedRefreshAuth = vi.mocked(refreshAuth);
 
-const mockedGetCurrentUser =
-  vi.mocked(getCurrentUser);
+const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 
-const mockedLogoutUser =
-  vi.mocked(logoutUser);
+const mockedLogoutUser = vi.mocked(logoutUser);
 
-const mockedVerifyAccessToken =
-  vi.mocked(verifyAccessToken);
+const mockedVerifyAccessToken = vi.mocked(verifyAccessToken);
 
 const createdAt = new Date();
 const updatedAt = new Date();
@@ -90,14 +67,12 @@ describe('auth API integration', () => {
       refreshToken: 'refresh-token-1',
     });
 
-    const response = await request(app)
-      .post('/api/auth/register')
-      .send({
-        username: 'asil',
-        email: 'asil@example.com',
-        password: 'Password123!',
-        name: 'Asil',
-      });
+    const response = await request(app).post('/api/auth/register').send({
+      username: 'asil',
+      email: 'asil@example.com',
+      password: 'Password123!',
+      name: 'Asil',
+    });
 
     expect(response.status).toBe(201);
 
@@ -113,13 +88,9 @@ describe('auth API integration', () => {
       },
     });
 
-    expect(
-      response.headers['set-cookie'],
-    ).toBeDefined();
+    expect(response.headers['set-cookie']).toBeDefined();
 
-    expect(
-      mockedRegisterUser,
-    ).toHaveBeenCalledWith({
+    expect(mockedRegisterUser).toHaveBeenCalledWith({
       username: 'asil',
       email: 'asil@example.com',
       password: 'Password123!',
@@ -134,12 +105,10 @@ describe('auth API integration', () => {
       refreshToken: 'refresh-token-2',
     });
 
-    const response = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: 'asil@example.com',
-        password: 'Password123!',
-      });
+    const response = await request(app).post('/api/auth/login').send({
+      email: 'asil@example.com',
+      password: 'Password123!',
+    });
 
     expect(response.status).toBe(200);
 
@@ -154,13 +123,9 @@ describe('auth API integration', () => {
       },
     });
 
-    expect(
-      response.headers['set-cookie'],
-    ).toBeDefined();
+    expect(response.headers['set-cookie']).toBeDefined();
 
-    expect(
-      mockedLoginUser,
-    ).toHaveBeenCalledWith({
+    expect(mockedLoginUser).toHaveBeenCalledWith({
       email: 'asil@example.com',
       password: 'Password123!',
     });
@@ -171,30 +136,17 @@ describe('auth API integration', () => {
       sub: 'user-1',
     } as never);
 
-    mockedGetCurrentUser.mockResolvedValue(
-      user,
-    );
+    mockedGetCurrentUser.mockResolvedValue(user);
 
     const response = await request(app)
       .get('/api/auth/me')
-      .set(
-        'Authorization',
-        'Bearer test-access-token',
-      );
+      .set('Authorization', 'Bearer test-access-token');
 
     expect(response.status).toBe(200);
 
-    expect(
-      mockedVerifyAccessToken,
-    ).toHaveBeenCalledWith(
-      'test-access-token',
-    );
+    expect(mockedVerifyAccessToken).toHaveBeenCalledWith('test-access-token');
 
-    expect(
-      mockedGetCurrentUser,
-    ).toHaveBeenCalledWith(
-      'user-1',
-    );
+    expect(mockedGetCurrentUser).toHaveBeenCalledWith('user-1');
 
     expect(response.body).toMatchObject({
       success: true,
@@ -223,55 +175,35 @@ describe('auth API integration', () => {
 
     const agent = request.agent(app);
 
-    const loginResponse =
-      await agent
-        .post('/api/auth/login')
-        .send({
-          email: 'asil@example.com',
-          password: 'Password123!',
-        });
+    const loginResponse = await agent.post('/api/auth/login').send({
+      email: 'asil@example.com',
+      password: 'Password123!',
+    });
 
     expect(loginResponse.status).toBe(200);
 
-    const refreshResponse =
-      await agent.post(
-        '/api/auth/refresh',
-      );
+    const refreshResponse = await agent.post('/api/auth/refresh');
 
-    expect(refreshResponse.status).toBe(
-      200,
-    );
+    expect(refreshResponse.status).toBe(200);
 
-    expect(
-      refreshResponse.body,
-    ).toMatchObject({
+    expect(refreshResponse.body).toMatchObject({
       success: true,
       data: {
         user: {
           id: 'user-1',
           username: 'asil',
         },
-        accessToken:
-          'new-access-token',
+        accessToken: 'new-access-token',
       },
     });
 
-    expect(
-      mockedRefreshAuth,
-    ).toHaveBeenCalledWith(
-      'refresh-token-2',
-    );
+    expect(mockedRefreshAuth).toHaveBeenCalledWith('refresh-token-2');
 
-    expect(
-      refreshResponse.headers[
-        'set-cookie'
-      ],
-    ).toBeDefined();
+    expect(refreshResponse.headers['set-cookie']).toBeDefined();
   });
 
   it('rejects refresh without refresh cookie', async () => {
-    const response = await request(app)
-      .post('/api/auth/refresh');
+    const response = await request(app).post('/api/auth/refresh');
 
     expect(response.status).toBe(401);
 
@@ -279,14 +211,11 @@ describe('auth API integration', () => {
       success: false,
       error: {
         code: 'REFRESH_TOKEN_REQUIRED',
-        message:
-          'Refresh token is required',
+        message: 'Refresh token is required',
       },
     });
 
-    expect(
-      mockedRefreshAuth,
-    ).not.toHaveBeenCalled();
+    expect(mockedRefreshAuth).not.toHaveBeenCalled();
   });
 
   it('logs out and clears refresh cookie', async () => {
@@ -296,54 +225,37 @@ describe('auth API integration', () => {
       refreshToken: 'refresh-token-2',
     });
 
-    mockedLogoutUser.mockResolvedValue(
-      undefined,
-    );
+    mockedLogoutUser.mockResolvedValue(undefined);
 
     const agent = request.agent(app);
 
-    const loginResponse =
-      await agent
-        .post('/api/auth/login')
-        .send({
-          email: 'asil@example.com',
-          password: 'Password123!',
-        });
+    const loginResponse = await agent.post('/api/auth/login').send({
+      email: 'asil@example.com',
+      password: 'Password123!',
+    });
 
     expect(loginResponse.status).toBe(200);
 
-    const response =
-      await agent.post(
-        '/api/auth/logout',
-      );
+    const response = await agent.post('/api/auth/logout');
 
     expect(response.status).toBe(200);
 
     expect(response.body).toMatchObject({
       success: true,
-      message:
-        'Logged out successfully',
+      message: 'Logged out successfully',
     });
 
-    expect(
-      mockedLogoutUser,
-    ).toHaveBeenCalledWith(
-      'refresh-token-2',
-    );
+    expect(mockedLogoutUser).toHaveBeenCalledWith('refresh-token-2');
 
-    expect(
-      response.headers['set-cookie'],
-    ).toBeDefined();
+    expect(response.headers['set-cookie']).toBeDefined();
   });
 
   it('rejects invalid register payload', async () => {
-    const response = await request(app)
-      .post('/api/auth/register')
-      .send({
-        username: '',
-        email: 'invalid-email',
-        password: '123',
-      });
+    const response = await request(app).post('/api/auth/register').send({
+      username: '',
+      email: 'invalid-email',
+      password: '123',
+    });
 
     expect(response.status).toBe(400);
 
@@ -355,18 +267,14 @@ describe('auth API integration', () => {
       },
     });
 
-    expect(
-      mockedRegisterUser,
-    ).not.toHaveBeenCalled();
+    expect(mockedRegisterUser).not.toHaveBeenCalled();
   });
 
   it('rejects invalid login payload', async () => {
-    const response = await request(app)
-      .post('/api/auth/login')
-      .send({
-        email: 'invalid-email',
-        password: '',
-      });
+    const response = await request(app).post('/api/auth/login').send({
+      email: 'invalid-email',
+      password: '',
+    });
 
     expect(response.status).toBe(400);
 
@@ -378,8 +286,6 @@ describe('auth API integration', () => {
       },
     });
 
-    expect(
-      mockedLoginUser,
-    ).not.toHaveBeenCalled();
+    expect(mockedLoginUser).not.toHaveBeenCalled();
   });
 });

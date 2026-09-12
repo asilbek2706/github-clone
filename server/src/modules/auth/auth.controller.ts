@@ -20,39 +20,23 @@ import {
 
 import { createPersonalAccessToken } from './pat.service.js';
 
-import {
-  createPersonalAccessTokenSchema,
-  loginSchema,
-  registerSchema,
-} from './auth.validation.js';
+import { createPersonalAccessTokenSchema, loginSchema, registerSchema } from './auth.validation.js';
 
-export const register = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const register = async (req: Request, res: Response): Promise<void> => {
   const result = registerSchema.safeParse(req.body);
 
   if (!result.success) {
-    throw new AuthError(
-      'Validation failed',
-      400,
-      'VALIDATION_ERROR',
-    );
+    throw new AuthError('Validation failed', 400, 'VALIDATION_ERROR');
   }
 
   const auth = await registerUser({
     username: result.data.username,
     email: result.data.email,
     password: result.data.password,
-    ...(result.data.name !== undefined
-      ? { name: result.data.name }
-      : {}),
+    ...(result.data.name !== undefined ? { name: result.data.name } : {}),
   });
 
-  setRefreshTokenCookie(
-    res,
-    auth.refreshToken,
-  );
+  setRefreshTokenCookie(res, auth.refreshToken);
 
   res.status(201).json({
     success: true,
@@ -63,26 +47,16 @@ export const register = async (
   });
 };
 
-export const login = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const login = async (req: Request, res: Response): Promise<void> => {
   const result = loginSchema.safeParse(req.body);
 
   if (!result.success) {
-    throw new AuthError(
-      'Validation failed',
-      400,
-      'VALIDATION_ERROR',
-    );
+    throw new AuthError('Validation failed', 400, 'VALIDATION_ERROR');
   }
 
   const auth = await loginUser(result.data);
 
-  setRefreshTokenCookie(
-    res,
-    auth.refreshToken,
-  );
+  setRefreshTokenCookie(res, auth.refreshToken);
 
   res.status(200).json({
     success: true,
@@ -93,28 +67,16 @@ export const login = async (
   });
 };
 
-export const refresh = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const refreshToken =
-    getRefreshTokenFromCookie(req);
+export const refresh = async (req: Request, res: Response): Promise<void> => {
+  const refreshToken = getRefreshTokenFromCookie(req);
 
   if (!refreshToken) {
-    throw new AuthError(
-      'Refresh token is required',
-      401,
-      'REFRESH_TOKEN_REQUIRED',
-    );
+    throw new AuthError('Refresh token is required', 401, 'REFRESH_TOKEN_REQUIRED');
   }
 
-  const auth =
-    await refreshAuth(refreshToken);
+  const auth = await refreshAuth(refreshToken);
 
-  setRefreshTokenCookie(
-    res,
-    auth.refreshToken,
-  );
+  setRefreshTokenCookie(res, auth.refreshToken);
 
   res.status(200).json({
     success: true,
@@ -125,24 +87,14 @@ export const refresh = async (
   });
 };
 
-export const getRefreshTokenFromCookie = (
-  req: Request,
-): string | undefined => {
-  return req.cookies?.[
-    getRefreshTokenCookieName()
-  ];
+export const getRefreshTokenFromCookie = (req: Request): string | undefined => {
+  return req.cookies?.[getRefreshTokenCookieName()];
 };
 
-export const me = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const authenticatedReq =
-    req as AuthenticatedRequest;
+export const me = async (req: Request, res: Response): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
 
-  const user = await getCurrentUser(
-    authenticatedReq.userId,
-  );
+  const user = await getCurrentUser(authenticatedReq.userId);
 
   res.status(200).json({
     success: true,
@@ -152,12 +104,8 @@ export const me = async (
   });
 };
 
-export const logout = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const refreshToken =
-    getRefreshTokenFromCookie(req);
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  const refreshToken = getRefreshTokenFromCookie(req);
 
   if (refreshToken) {
     await logoutUser(refreshToken);
@@ -171,34 +119,20 @@ export const logout = async (
   });
 };
 
-export const createToken = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  const authenticatedReq =
-    req as AuthenticatedRequest;
+export const createToken = async (req: Request, res: Response): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
 
-  const result =
-    createPersonalAccessTokenSchema.safeParse(
-      req.body,
-    );
+  const result = createPersonalAccessTokenSchema.safeParse(req.body);
 
   if (!result.success) {
-    throw new AuthError(
-      'Validation failed',
-      400,
-      'VALIDATION_ERROR',
-    );
+    throw new AuthError('Validation failed', 400, 'VALIDATION_ERROR');
   }
 
-  const personalAccessToken =
-    await createPersonalAccessToken(
-      authenticatedReq.userId,
-      result.data.name,
-      result.data.expiresAt
-        ? new Date(result.data.expiresAt)
-        : null,
-    );
+  const personalAccessToken = await createPersonalAccessToken(
+    authenticatedReq.userId,
+    result.data.name,
+    result.data.expiresAt ? new Date(result.data.expiresAt) : null,
+  );
 
   res.status(201).json({
     success: true,
@@ -206,10 +140,8 @@ export const createToken = async (
       token: personalAccessToken.token,
       id: personalAccessToken.id,
       name: personalAccessToken.name,
-      expiresAt:
-        personalAccessToken.expiresAt,
-      createdAt:
-        personalAccessToken.createdAt,
+      expiresAt: personalAccessToken.expiresAt,
+      createdAt: personalAccessToken.createdAt,
     },
   });
 };

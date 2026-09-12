@@ -1,13 +1,9 @@
-import type {
-  RepositoryPermission,
-} from '../../generated/prisma/enums.js';
+import type { RepositoryPermission } from '../../generated/prisma/enums.js';
 
 import prisma from '../../config/prisma.js';
 import { AuthError } from '../auth/auth.errors.js';
 
-export type RepositoryAccessType =
-  | 'READ'
-  | 'WRITE';
+export type RepositoryAccessType = 'READ' | 'WRITE';
 
 type RepositoryAccessResult = {
   repositoryId: string;
@@ -15,10 +11,7 @@ type RepositoryAccessResult = {
   repositoryOwnerId: string;
   repositoryOwnerUsername: string;
   isPrivate: boolean;
-  permission:
-    | 'OWNER'
-    | RepositoryPermission
-    | 'PUBLIC';
+  permission: 'OWNER' | RepositoryPermission | 'PUBLIC';
 };
 
 export const authorizeRepositoryAccess = async (
@@ -26,115 +19,83 @@ export const authorizeRepositoryAccess = async (
   accessType: RepositoryAccessType,
   userId?: string,
 ): Promise<RepositoryAccessResult> => {
-  const repository =
-    await prisma.repository.findUnique({
-      where: {
-        id: repositoryId,
-      },
-      select: {
-        id: true,
-        name: true,
-        isPrivate: true,
-        ownerId: true,
-        owner: {
-          select: {
-            username: true,
-          },
+  const repository = await prisma.repository.findUnique({
+    where: {
+      id: repositoryId,
+    },
+    select: {
+      id: true,
+      name: true,
+      isPrivate: true,
+      ownerId: true,
+      owner: {
+        select: {
+          username: true,
         },
-        collaborators: userId
-          ? {
-              where: {
-                userId,
-              },
-              select: {
-                permission: true,
-              },
-              take: 1,
-            }
-          : false,
       },
-    });
+      collaborators: userId
+        ? {
+            where: {
+              userId,
+            },
+            select: {
+              permission: true,
+            },
+            take: 1,
+          }
+        : false,
+    },
+  });
 
   if (!repository) {
-    throw new AuthError(
-      'Repository not found',
-      404,
-      'REPOSITORY_NOT_FOUND',
-    );
+    throw new AuthError('Repository not found', 404, 'REPOSITORY_NOT_FOUND');
   }
 
-  if (
-    userId &&
-    repository.ownerId === userId
-  ) {
+  if (userId && repository.ownerId === userId) {
     return {
       repositoryId: repository.id,
       repositoryName: repository.name,
-      repositoryOwnerId:
-        repository.ownerId,
-      repositoryOwnerUsername:
-        repository.owner.username,
+      repositoryOwnerId: repository.ownerId,
+      repositoryOwnerUsername: repository.owner.username,
       isPrivate: repository.isPrivate,
       permission: 'OWNER',
     };
   }
 
-  if (
-    accessType === 'READ' &&
-    !repository.isPrivate
-  ) {
+  if (accessType === 'READ' && !repository.isPrivate) {
     return {
       repositoryId: repository.id,
       repositoryName: repository.name,
-      repositoryOwnerId:
-        repository.ownerId,
-      repositoryOwnerUsername:
-        repository.owner.username,
+      repositoryOwnerId: repository.ownerId,
+      repositoryOwnerUsername: repository.owner.username,
       isPrivate: repository.isPrivate,
       permission: 'PUBLIC',
     };
   }
 
   if (userId) {
-    const collaborator =
-      repository.collaborators[0];
+    const collaborator = repository.collaborators[0];
 
     if (collaborator) {
-      if (
-        accessType === 'READ'
-      ) {
+      if (accessType === 'READ') {
         return {
           repositoryId: repository.id,
-          repositoryName:
-            repository.name,
-          repositoryOwnerId:
-            repository.ownerId,
-          repositoryOwnerUsername:
-            repository.owner.username,
-          isPrivate:
-            repository.isPrivate,
-          permission:
-            collaborator.permission,
+          repositoryName: repository.name,
+          repositoryOwnerId: repository.ownerId,
+          repositoryOwnerUsername: repository.owner.username,
+          isPrivate: repository.isPrivate,
+          permission: collaborator.permission,
         };
       }
 
-      if (
-        accessType === 'WRITE' &&
-        collaborator.permission ===
-          'WRITE'
-      ) {
+      if (accessType === 'WRITE' && collaborator.permission === 'WRITE') {
         return {
           repositoryId: repository.id,
-          repositoryName:
-            repository.name,
-          repositoryOwnerId:
-            repository.ownerId,
-          repositoryOwnerUsername:
-            repository.owner.username,
-          isPrivate:
-            repository.isPrivate,
-          permission:
-            collaborator.permission,
+          repositoryName: repository.name,
+          repositoryOwnerId: repository.ownerId,
+          repositoryOwnerUsername: repository.owner.username,
+          isPrivate: repository.isPrivate,
+          permission: collaborator.permission,
         };
       }
     }

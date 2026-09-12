@@ -21,10 +21,7 @@ app.use(
   }),
 );
 
-app.use(
-  '/:username/:repository.git',
-  gitHttpController,
-);
+app.use('/:username/:repository.git', gitHttpController);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

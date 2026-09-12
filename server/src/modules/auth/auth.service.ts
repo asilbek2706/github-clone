@@ -8,12 +8,7 @@ import {
   hashRefreshToken,
   verifyRefreshToken,
 } from './auth.tokens.js';
-import type {
-  AuthResponse,
-  AuthUser,
-  LoginInput,
-  RegisterInput,
-} from './auth.types.js';
+import type { AuthResponse, AuthUser, LoginInput, RegisterInput } from './auth.types.js';
 
 const SALT_ROUNDS = 12;
 const REFRESH_TOKEN_EXPIRES_IN_DAYS = 7;
@@ -41,45 +36,27 @@ const toAuthUser = (user: {
 const getRefreshTokenExpiresAt = (): Date => {
   const expiresAt = new Date();
 
-  expiresAt.setDate(
-    expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_IN_DAYS,
-  );
+  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_IN_DAYS);
 
   return expiresAt;
 };
 
-export const registerUser = async (
-  input: RegisterInput,
-): Promise<AuthResponse> => {
+export const registerUser = async (input: RegisterInput): Promise<AuthResponse> => {
   const existingUser = await prisma.user.findFirst({
     where: {
-      OR: [
-        { username: input.username },
-        { email: input.email },
-      ],
+      OR: [{ username: input.username }, { email: input.email }],
     },
   });
 
   if (existingUser) {
     if (existingUser.username === input.username) {
-      throw new AuthError(
-        'Username is already taken',
-        409,
-        'USERNAME_TAKEN',
-      );
+      throw new AuthError('Username is already taken', 409, 'USERNAME_TAKEN');
     }
 
-    throw new AuthError(
-      'Email is already registered',
-      409,
-      'EMAIL_ALREADY_REGISTERED',
-    );
+    throw new AuthError('Email is already registered', 409, 'EMAIL_ALREADY_REGISTERED');
   }
 
-  const hashedPassword = await bcrypt.hash(
-    input.password,
-    SALT_ROUNDS,
-  );
+  const hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
 
   const user = await prisma.user.create({
     data: {
@@ -108,9 +85,7 @@ export const registerUser = async (
   };
 };
 
-export const loginUser = async (
-  input: LoginInput,
-): Promise<AuthResponse> => {
+export const loginUser = async (input: LoginInput): Promise<AuthResponse> => {
   const user = await prisma.user.findUnique({
     where: {
       email: input.email,
@@ -118,24 +93,13 @@ export const loginUser = async (
   });
 
   if (!user) {
-    throw new AuthError(
-      'Invalid email or password',
-      401,
-      'INVALID_CREDENTIALS',
-    );
+    throw new AuthError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
 
-  const passwordMatches = await bcrypt.compare(
-    input.password,
-    user.password,
-  );
+  const passwordMatches = await bcrypt.compare(input.password, user.password);
 
   if (!passwordMatches) {
-    throw new AuthError(
-      'Invalid email or password',
-      401,
-      'INVALID_CREDENTIALS',
-    );
+    throw new AuthError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
 
   const accessToken = generateAccessToken(user.id);
@@ -156,9 +120,7 @@ export const loginUser = async (
   };
 };
 
-export const refreshAuth = async (
-  refreshToken: string,
-): Promise<AuthResponse> => {
+export const refreshAuth = async (refreshToken: string): Promise<AuthResponse> => {
   const payload = verifyRefreshToken(refreshToken);
 
   const refreshTokenHash = hashRefreshToken(refreshToken);
@@ -170,35 +132,19 @@ export const refreshAuth = async (
   });
 
   if (!session) {
-    throw new AuthError(
-      'Invalid refresh token',
-      401,
-      'INVALID_REFRESH_TOKEN',
-    );
+    throw new AuthError('Invalid refresh token', 401, 'INVALID_REFRESH_TOKEN');
   }
 
   if (session.revokedAt !== null) {
-    throw new AuthError(
-      'Refresh token has been revoked',
-      401,
-      'REFRESH_TOKEN_REVOKED',
-    );
+    throw new AuthError('Refresh token has been revoked', 401, 'REFRESH_TOKEN_REVOKED');
   }
 
   if (session.expiresAt <= new Date()) {
-    throw new AuthError(
-      'Refresh token has expired',
-      401,
-      'REFRESH_TOKEN_EXPIRED',
-    );
+    throw new AuthError('Refresh token has expired', 401, 'REFRESH_TOKEN_EXPIRED');
   }
 
   if (session.userId !== payload.sub) {
-    throw new AuthError(
-      'Invalid refresh token',
-      401,
-      'INVALID_REFRESH_TOKEN',
-    );
+    throw new AuthError('Invalid refresh token', 401, 'INVALID_REFRESH_TOKEN');
   }
 
   const user = await prisma.user.findUnique({
@@ -208,11 +154,7 @@ export const refreshAuth = async (
   });
 
   if (!user) {
-    throw new AuthError(
-      'User not found',
-      401,
-      'USER_NOT_FOUND',
-    );
+    throw new AuthError('User not found', 401, 'USER_NOT_FOUND');
   }
 
   const accessToken = generateAccessToken(user.id);
@@ -244,9 +186,7 @@ export const refreshAuth = async (
   };
 };
 
-export const getCurrentUser = async (
-  userId: string,
-): Promise<AuthUser> => {
+export const getCurrentUser = async (userId: string): Promise<AuthUser> => {
   const user = await prisma.user.findUnique({
     where: {
       id: userId,
@@ -254,19 +194,13 @@ export const getCurrentUser = async (
   });
 
   if (!user) {
-    throw new AuthError(
-      'User not found',
-      404,
-      'USER_NOT_FOUND',
-    );
+    throw new AuthError('User not found', 404, 'USER_NOT_FOUND');
   }
 
   return toAuthUser(user);
 };
 
-export const logoutUser = async (
-  refreshToken: string,
-): Promise<void> => {
+export const logoutUser = async (refreshToken: string): Promise<void> => {
   const tokenHash = hashRefreshToken(refreshToken);
 
   await prisma.session.updateMany({

@@ -11,11 +11,7 @@ export const createRepositorySchema = z.object({
       'Repository name can only contain letters, numbers, dots, underscores and hyphens',
     ),
 
-  description: z
-    .string()
-    .trim()
-    .max(500, 'Description must be at most 500 characters')
-    .optional(),
+  description: z.string().trim().max(500, 'Description must be at most 500 characters').optional(),
 
   isPrivate: z.boolean().optional(),
 });
@@ -42,44 +38,20 @@ export const updateRepositorySchema = z.object({
   isPrivate: z.boolean().optional(),
 });
 
-export type CreateRepositoryInput = z.infer<
-  typeof createRepositorySchema
->;
+export type CreateRepositoryInput = z.infer<typeof createRepositorySchema>;
 
-export type UpdateRepositoryInput = z.infer<
-  typeof updateRepositorySchema
->;
+export type UpdateRepositoryInput = z.infer<typeof updateRepositorySchema>;
 
-export const addRepositoryCollaboratorSchema =
-  z.object({
-    username: z
-      .string()
-      .trim()
-      .min(
-        1,
-        'Collaborator username is required',
-      ),
+export const addRepositoryCollaboratorSchema = z.object({
+  username: z.string().trim().min(1, 'Collaborator username is required'),
 
-    permission: z.enum([
-      'READ',
-      'WRITE',
-    ]),
-  });
+  permission: z.enum(['READ', 'WRITE']),
+});
 
-export const updateRepositoryCollaboratorSchema =
-  z.object({
-    permission: z.enum([
-      'READ',
-      'WRITE',
-    ]),
-  });
+export const updateRepositoryCollaboratorSchema = z.object({
+  permission: z.enum(['READ', 'WRITE']),
+});
 
-export type AddRepositoryCollaboratorInput =
-  z.infer<
-    typeof addRepositoryCollaboratorSchema
-  >;
+export type AddRepositoryCollaboratorInput = z.infer<typeof addRepositoryCollaboratorSchema>;
 
-export type UpdateRepositoryCollaboratorInput =
-  z.infer<
-    typeof updateRepositoryCollaboratorSchema
-  >;
+export type UpdateRepositoryCollaboratorInput = z.infer<typeof updateRepositoryCollaboratorSchema>;

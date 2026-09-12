@@ -15,47 +15,22 @@ if (!storagePath) {
 
 const GIT_STORAGE_PATH = path.resolve(process.cwd(), storagePath);
 
-const getRepositoryPath = (
-  username: string,
-  repositoryName: string,
-): string => {
-  return path.join(
-    GIT_STORAGE_PATH,
-    username,
-    `${repositoryName}.git`,
-  );
+const getRepositoryPath = (username: string, repositoryName: string): string => {
+  return path.join(GIT_STORAGE_PATH, username, `${repositoryName}.git`);
 };
 
 export const createGitRepository = async (
   username: string,
   repositoryName: string,
 ): Promise<string> => {
-  const repositoryPath = getRepositoryPath(
-    username,
-    repositoryName,
-  );
+  const repositoryPath = getRepositoryPath(username, repositoryName);
 
   try {
-    await execFileAsync('git', [
-      'init',
-      '--bare',
-      '--initial-branch=main',
-      repositoryPath,
-    ]);
+    await execFileAsync('git', ['init', '--bare', '--initial-branch=main', repositoryPath]);
 
-    await execFileAsync('git', [
-      '--git-dir',
-      repositoryPath,
-      'config',
-      'http.receivepack',
-      'true',
-    ]);
+    await execFileAsync('git', ['--git-dir', repositoryPath, 'config', 'http.receivepack', 'true']);
   } catch {
-    throw new AuthError(
-      'Failed to create Git repository',
-      500,
-      'GIT_REPOSITORY_CREATE_FAILED',
-    );
+    throw new AuthError('Failed to create Git repository', 500, 'GIT_REPOSITORY_CREATE_FAILED');
   }
 
   return repositoryPath;
@@ -66,27 +41,14 @@ export const renameGitRepository = async (
   oldRepositoryName: string,
   newRepositoryName: string,
 ): Promise<void> => {
-  const oldRepositoryPath = getRepositoryPath(
-    username,
-    oldRepositoryName,
-  );
+  const oldRepositoryPath = getRepositoryPath(username, oldRepositoryName);
 
-  const newRepositoryPath = getRepositoryPath(
-    username,
-    newRepositoryName,
-  );
+  const newRepositoryPath = getRepositoryPath(username, newRepositoryName);
 
   try {
-    await fs.rename(
-      oldRepositoryPath,
-      newRepositoryPath,
-    );
+    await fs.rename(oldRepositoryPath, newRepositoryPath);
   } catch {
-    throw new AuthError(
-      'Failed to rename Git repository',
-      500,
-      'GIT_REPOSITORY_RENAME_FAILED',
-    );
+    throw new AuthError('Failed to rename Git repository', 500, 'GIT_REPOSITORY_RENAME_FAILED');
   }
 };
 
@@ -94,10 +56,7 @@ export const deleteGitRepository = async (
   username: string,
   repositoryName: string,
 ): Promise<void> => {
-  const repositoryPath = getRepositoryPath(
-    username,
-    repositoryName,
-  );
+  const repositoryPath = getRepositoryPath(username, repositoryName);
 
   try {
     await fs.rm(repositoryPath, {
@@ -105,10 +64,6 @@ export const deleteGitRepository = async (
       force: true,
     });
   } catch {
-    throw new AuthError(
-      'Failed to delete Git repository',
-      500,
-      'GIT_REPOSITORY_DELETE_FAILED',
-    );
+    throw new AuthError('Failed to delete Git repository', 500, 'GIT_REPOSITORY_DELETE_FAILED');
   }
 };

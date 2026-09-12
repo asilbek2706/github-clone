@@ -1,10 +1,4 @@
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import prisma from '../../../src/config/prisma.js';
 
@@ -33,36 +27,19 @@ vi.mock('../../../src/config/prisma.js', () => ({
   },
 }));
 
-const mockedRepositoryFindFirst =
-  vi.mocked(prisma.repository.findFirst);
+const mockedRepositoryFindFirst = vi.mocked(prisma.repository.findFirst);
 
-const mockedUserFindUnique =
-  vi.mocked(prisma.user.findUnique);
+const mockedUserFindUnique = vi.mocked(prisma.user.findUnique);
 
-const mockedCollaboratorFindUnique =
-  vi.mocked(
-    prisma.repositoryCollaborator.findUnique,
-  );
+const mockedCollaboratorFindUnique = vi.mocked(prisma.repositoryCollaborator.findUnique);
 
-const mockedCollaboratorFindMany =
-  vi.mocked(
-    prisma.repositoryCollaborator.findMany,
-  );
+const mockedCollaboratorFindMany = vi.mocked(prisma.repositoryCollaborator.findMany);
 
-const mockedCollaboratorCreate =
-  vi.mocked(
-    prisma.repositoryCollaborator.create,
-  );
+const mockedCollaboratorCreate = vi.mocked(prisma.repositoryCollaborator.create);
 
-const mockedCollaboratorUpdate =
-  vi.mocked(
-    prisma.repositoryCollaborator.update,
-  );
+const mockedCollaboratorUpdate = vi.mocked(prisma.repositoryCollaborator.update);
 
-const mockedCollaboratorDelete =
-  vi.mocked(
-    prisma.repositoryCollaborator.delete,
-  );
+const mockedCollaboratorDelete = vi.mocked(prisma.repositoryCollaborator.delete);
 
 describe('repository collaborator service', () => {
   beforeEach(() => {
@@ -70,17 +47,9 @@ describe('repository collaborator service', () => {
   });
 
   it('throws 404 when repository does not exist', async () => {
-    mockedRepositoryFindFirst.mockResolvedValue(
-      null as never,
-    );
+    mockedRepositoryFindFirst.mockResolvedValue(null as never);
 
-    await expect(
-      getRepositoryCollaborators(
-        'owner-1',
-        'asil',
-        'demo',
-      ),
-    ).rejects.toMatchObject({
+    await expect(getRepositoryCollaborators('owner-1', 'asil', 'demo')).rejects.toMatchObject({
       statusCode: 404,
       code: 'REPOSITORY_NOT_FOUND',
     });
@@ -92,13 +61,7 @@ describe('repository collaborator service', () => {
       ownerId: 'owner-1',
     } as never);
 
-    await expect(
-      getRepositoryCollaborators(
-        'user-2',
-        'asil',
-        'demo',
-      ),
-    ).rejects.toMatchObject({
+    await expect(getRepositoryCollaborators('user-2', 'asil', 'demo')).rejects.toMatchObject({
       statusCode: 403,
       code: 'REPOSITORY_FORBIDDEN',
     });
@@ -115,9 +78,7 @@ describe('repository collaborator service', () => {
       username: 'testuser',
     } as never);
 
-    mockedCollaboratorFindUnique.mockResolvedValue(
-      null as never,
-    );
+    mockedCollaboratorFindUnique.mockResolvedValue(null as never);
 
     mockedCollaboratorCreate.mockResolvedValue({
       id: 'collab-1',
@@ -132,23 +93,12 @@ describe('repository collaborator service', () => {
       },
     } as never);
 
-    const result =
-      await addRepositoryCollaborator(
-        'owner-1',
-        'asil',
-        'demo',
-        'testuser',
-        'READ',
-      );
+    const result = await addRepositoryCollaborator('owner-1', 'asil', 'demo', 'testuser', 'READ');
 
     expect(result.permission).toBe('READ');
-    expect(result.user.username).toBe(
-      'testuser',
-    );
+    expect(result.user.username).toBe('testuser');
 
-    expect(
-      mockedCollaboratorCreate,
-    ).toHaveBeenCalledOnce();
+    expect(mockedCollaboratorCreate).toHaveBeenCalledOnce();
   });
 
   it('rejects missing collaborator user', async () => {
@@ -157,18 +107,10 @@ describe('repository collaborator service', () => {
       ownerId: 'owner-1',
     } as never);
 
-    mockedUserFindUnique.mockResolvedValue(
-      null as never,
-    );
+    mockedUserFindUnique.mockResolvedValue(null as never);
 
     await expect(
-      addRepositoryCollaborator(
-        'owner-1',
-        'asil',
-        'demo',
-        'missing-user',
-        'READ',
-      ),
+      addRepositoryCollaborator('owner-1', 'asil', 'demo', 'missing-user', 'READ'),
     ).rejects.toMatchObject({
       statusCode: 404,
       code: 'COLLABORATOR_USER_NOT_FOUND',
@@ -187,13 +129,7 @@ describe('repository collaborator service', () => {
     } as never);
 
     await expect(
-      addRepositoryCollaborator(
-        'owner-1',
-        'asil',
-        'demo',
-        'asil',
-        'READ',
-      ),
+      addRepositoryCollaborator('owner-1', 'asil', 'demo', 'asil', 'READ'),
     ).rejects.toMatchObject({
       statusCode: 400,
       code: 'OWNER_CANNOT_BE_COLLABORATOR',
@@ -216,13 +152,7 @@ describe('repository collaborator service', () => {
     } as never);
 
     await expect(
-      addRepositoryCollaborator(
-        'owner-1',
-        'asil',
-        'demo',
-        'testuser',
-        'READ',
-      ),
+      addRepositoryCollaborator('owner-1', 'asil', 'demo', 'testuser', 'READ'),
     ).rejects.toMatchObject({
       statusCode: 409,
       code: 'COLLABORATOR_ALREADY_EXISTS',
@@ -250,17 +180,10 @@ describe('repository collaborator service', () => {
       },
     ] as never);
 
-    const result =
-      await getRepositoryCollaborators(
-        'owner-1',
-        'asil',
-        'demo',
-      );
+    const result = await getRepositoryCollaborators('owner-1', 'asil', 'demo');
 
     expect(result).toHaveLength(1);
-    expect(result[0]?.user.username).toBe(
-      'testuser',
-    );
+    expect(result[0]?.user.username).toBe('testuser');
   });
 
   it('updates collaborator permission', async () => {
@@ -290,20 +213,17 @@ describe('repository collaborator service', () => {
       },
     } as never);
 
-    const result =
-      await updateRepositoryCollaborator(
-        'owner-1',
-        'asil',
-        'demo',
-        'testuser',
-        'WRITE',
-      );
+    const result = await updateRepositoryCollaborator(
+      'owner-1',
+      'asil',
+      'demo',
+      'testuser',
+      'WRITE',
+    );
 
     expect(result.permission).toBe('WRITE');
 
-    expect(
-      mockedCollaboratorUpdate,
-    ).toHaveBeenCalledOnce();
+    expect(mockedCollaboratorUpdate).toHaveBeenCalledOnce();
   });
 
   it('throws 404 when updating missing collaborator', async () => {
@@ -316,18 +236,10 @@ describe('repository collaborator service', () => {
       id: 'user-2',
     } as never);
 
-    mockedCollaboratorFindUnique.mockResolvedValue(
-      null as never,
-    );
+    mockedCollaboratorFindUnique.mockResolvedValue(null as never);
 
     await expect(
-      updateRepositoryCollaborator(
-        'owner-1',
-        'asil',
-        'demo',
-        'testuser',
-        'WRITE',
-      ),
+      updateRepositoryCollaborator('owner-1', 'asil', 'demo', 'testuser', 'WRITE'),
     ).rejects.toMatchObject({
       statusCode: 404,
       code: 'COLLABORATOR_NOT_FOUND',
@@ -353,17 +265,10 @@ describe('repository collaborator service', () => {
     } as never);
 
     await expect(
-      removeRepositoryCollaborator(
-        'owner-1',
-        'asil',
-        'demo',
-        'testuser',
-      ),
+      removeRepositoryCollaborator('owner-1', 'asil', 'demo', 'testuser'),
     ).resolves.toBeUndefined();
 
-    expect(
-      mockedCollaboratorDelete,
-    ).toHaveBeenCalledOnce();
+    expect(mockedCollaboratorDelete).toHaveBeenCalledOnce();
   });
 
   it('throws 404 when removing missing collaborator', async () => {
@@ -376,21 +281,13 @@ describe('repository collaborator service', () => {
       id: 'user-2',
     } as never);
 
-    mockedCollaboratorFindUnique.mockResolvedValue(
-      null as never,
-    );
+    mockedCollaboratorFindUnique.mockResolvedValue(null as never);
 
     await expect(
-      removeRepositoryCollaborator(
-        'owner-1',
-        'asil',
-        'demo',
-        'testuser',
-      ),
+      removeRepositoryCollaborator('owner-1', 'asil', 'demo', 'testuser'),
     ).rejects.toMatchObject({
       statusCode: 404,
       code: 'COLLABORATOR_NOT_FOUND',
     });
   });
 });
-

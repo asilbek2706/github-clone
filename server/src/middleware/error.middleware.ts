@@ -2,12 +2,7 @@ import type { ErrorRequestHandler } from 'express';
 
 import { AuthError } from '../modules/auth/auth.errors.js';
 
-export const errorMiddleware: ErrorRequestHandler = (
-  error,
-  _req,
-  res,
-  _next,
-): void => {
+export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next): void => {
   if (error instanceof AuthError) {
     res.status(error.statusCode).json({
       success: false,

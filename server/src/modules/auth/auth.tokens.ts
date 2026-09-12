@@ -26,27 +26,16 @@ export const generateAccessToken = (userId: string): string => {
     type: 'access',
   };
 
-  return jwt.sign(
-    payload,
-    jwtConfig.accessSecret,
-    {
-      expiresIn: jwtConfig.accessExpiresIn!,
-    },
-  );
+  return jwt.sign(payload, jwtConfig.accessSecret, {
+    expiresIn: jwtConfig.accessExpiresIn!,
+  });
 };
 
-export const hashRefreshToken = (
-  token: string,
-): string => {
-  return crypto
-    .createHash('sha256')
-    .update(token)
-    .digest('hex');
+export const hashRefreshToken = (token: string): string => {
+  return crypto.createHash('sha256').update(token).digest('hex');
 };
 
-export const generateRefreshToken = (
-  userId: string,
-): RefreshTokenData => {
+export const generateRefreshToken = (userId: string): RefreshTokenData => {
   const jti = crypto.randomUUID();
 
   const payload: RefreshTokenPayload = {
@@ -55,15 +44,11 @@ export const generateRefreshToken = (
     type: 'refresh',
   };
 
-  const token = jwt.sign(
-    payload,
-    jwtConfig.refreshSecret,
-    {
-      expiresIn: jwtConfig.refreshExpiresIn!,
-    },
-  );
+  const token = jwt.sign(payload, jwtConfig.refreshSecret, {
+    expiresIn: jwtConfig.refreshExpiresIn!,
+  });
 
-const tokenHash = hashRefreshToken(token);
+  const tokenHash = hashRefreshToken(token);
 
   return {
     token,
@@ -72,19 +57,10 @@ const tokenHash = hashRefreshToken(token);
   };
 };
 
-export const verifyAccessToken = (
-  token: string,
-): AccessTokenPayload => {
-  const payload = jwt.verify(
-    token,
-    jwtConfig.accessSecret,
-  );
+export const verifyAccessToken = (token: string): AccessTokenPayload => {
+  const payload = jwt.verify(token, jwtConfig.accessSecret);
 
-  if (
-    typeof payload === 'string' ||
-    payload.type !== 'access' ||
-    typeof payload.sub !== 'string'
-  ) {
+  if (typeof payload === 'string' || payload.type !== 'access' || typeof payload.sub !== 'string') {
     throw new Error('Invalid access token');
   }
 
@@ -94,13 +70,8 @@ export const verifyAccessToken = (
   };
 };
 
-export const verifyRefreshToken = (
-  token: string,
-): RefreshTokenPayload => {
-  const payload = jwt.verify(
-    token,
-    jwtConfig.refreshSecret,
-  );
+export const verifyRefreshToken = (token: string): RefreshTokenPayload => {
+  const payload = jwt.verify(token, jwtConfig.refreshSecret);
 
   if (
     typeof payload === 'string' ||

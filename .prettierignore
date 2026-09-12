@@ -11,6 +11,8 @@ server/dist
 server/generated
 server/storage
 server/coverage
+server/.agents
+server/src/generated
 
 .env
 .env.*

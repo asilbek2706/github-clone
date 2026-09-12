@@ -5,27 +5,19 @@ import {
   deleteGitRepository,
   renameGitRepository,
 } from '../git/git.repository.service.js';
-import type {
-  CreateRepositoryInput,
-  UpdateRepositoryInput,
-} from './repository.validation.js';
-import type {
-  RepositoryResponse,
-  RepositoryWithOwner,
-} from './repository.types.js';
+import type { CreateRepositoryInput, UpdateRepositoryInput } from './repository.validation.js';
+import type { RepositoryResponse, RepositoryWithOwner } from './repository.types.js';
 
-const toRepositoryResponse = (
-  repository: {
-    id: string;
-    ownerId: string;
-    name: string;
-    description: string | null;
-    isPrivate: boolean;
-    defaultBranch: string;
-    createdAt: Date;
-    updatedAt: Date;
-  },
-): RepositoryResponse => {
+const toRepositoryResponse = (repository: {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string | null;
+  isPrivate: boolean;
+  defaultBranch: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): RepositoryResponse => {
   return {
     id: repository.id,
     ownerId: repository.ownerId,
@@ -79,17 +71,10 @@ export const createRepository = async (
     });
 
     if (!owner) {
-      throw new AuthError(
-        'Repository owner not found',
-        404,
-        'USER_NOT_FOUND',
-      );
+      throw new AuthError('Repository owner not found', 404, 'USER_NOT_FOUND');
     }
 
-    await createGitRepository(
-      owner.username,
-      repository.name,
-    );
+    await createGitRepository(owner.username, repository.name);
   } catch (error) {
     await prisma.repository.delete({
       where: {
@@ -103,9 +88,7 @@ export const createRepository = async (
   return toRepositoryResponse(repository);
 };
 
-export const getUserRepositories = async (
-  username: string,
-): Promise<RepositoryResponse[]> => {
+export const getUserRepositories = async (username: string): Promise<RepositoryResponse[]> => {
   const repositories = await prisma.repository.findMany({
     where: {
       owner: {
@@ -144,11 +127,7 @@ export const getRepositoryByUsernameAndName = async (
   });
 
   if (!repository) {
-    throw new AuthError(
-      'Repository not found',
-      404,
-      'REPOSITORY_NOT_FOUND',
-    );
+    throw new AuthError('Repository not found', 404, 'REPOSITORY_NOT_FOUND');
   }
 
   return {
@@ -180,11 +159,7 @@ export const updateRepository = async (
   });
 
   if (!repository) {
-    throw new AuthError(
-      'Repository not found',
-      404,
-      'REPOSITORY_NOT_FOUND',
-    );
+    throw new AuthError('Repository not found', 404, 'REPOSITORY_NOT_FOUND');
   }
 
   if (repository.ownerId !== ownerId) {
@@ -213,11 +188,7 @@ export const updateRepository = async (
       );
     }
 
-    await renameGitRepository(
-      username,
-      repository.name,
-      input.name,
-    );
+    await renameGitRepository(username, repository.name, input.name);
   }
 
   const updatedRepository = await prisma.repository.update({
@@ -255,11 +226,7 @@ export const deleteRepository = async (
   });
 
   if (!repository) {
-    throw new AuthError(
-      'Repository not found',
-      404,
-      'REPOSITORY_NOT_FOUND',
-    );
+    throw new AuthError('Repository not found', 404, 'REPOSITORY_NOT_FOUND');
   }
 
   if (repository.ownerId !== ownerId) {
@@ -270,10 +237,7 @@ export const deleteRepository = async (
     );
   }
 
-  await deleteGitRepository(
-    username,
-    repository.name,
-  );
+  await deleteGitRepository(username, repository.name);
 
   await prisma.repository.delete({
     where: {

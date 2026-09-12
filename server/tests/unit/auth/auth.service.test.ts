@@ -1,10 +1,4 @@
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import bcrypt from 'bcrypt';
 
@@ -49,57 +43,40 @@ vi.mock('../../../src/config/prisma.js', () => ({
   },
 }));
 
-vi.mock(
-  '../../../src/modules/auth/auth.tokens.js',
-  () => ({
-    generateAccessToken: vi.fn(),
-    generateRefreshToken: vi.fn(),
-    hashRefreshToken: vi.fn(),
-    verifyRefreshToken: vi.fn(),
-  }),
-);
+vi.mock('../../../src/modules/auth/auth.tokens.js', () => ({
+  generateAccessToken: vi.fn(),
+  generateRefreshToken: vi.fn(),
+  hashRefreshToken: vi.fn(),
+  verifyRefreshToken: vi.fn(),
+}));
 
-const mockedUserFindFirst =
-  vi.mocked(prisma.user.findFirst);
+const mockedUserFindFirst = vi.mocked(prisma.user.findFirst);
 
-const mockedUserFindUnique =
-  vi.mocked(prisma.user.findUnique);
+const mockedUserFindUnique = vi.mocked(prisma.user.findUnique);
 
-const mockedUserCreate =
-  vi.mocked(prisma.user.create);
+const mockedUserCreate = vi.mocked(prisma.user.create);
 
-const mockedSessionCreate =
-  vi.mocked(prisma.session.create);
+const mockedSessionCreate = vi.mocked(prisma.session.create);
 
-const mockedSessionFindUnique =
-  vi.mocked(prisma.session.findUnique);
+const mockedSessionFindUnique = vi.mocked(prisma.session.findUnique);
 
-const mockedSessionUpdate =
-  vi.mocked(prisma.session.update);
+const mockedSessionUpdate = vi.mocked(prisma.session.update);
 
-const mockedSessionUpdateMany =
-  vi.mocked(prisma.session.updateMany);
+const mockedSessionUpdateMany = vi.mocked(prisma.session.updateMany);
 
-const mockedTransaction =
-  vi.mocked(prisma.$transaction);
+const mockedTransaction = vi.mocked(prisma.$transaction);
 
-const mockedBcryptHash =
-  vi.mocked(bcrypt.hash);
+const mockedBcryptHash = vi.mocked(bcrypt.hash);
 
-const mockedBcryptCompare =
-  vi.mocked(bcrypt.compare);
+const mockedBcryptCompare = vi.mocked(bcrypt.compare);
 
-const mockedGenerateAccessToken =
-  vi.mocked(generateAccessToken);
+const mockedGenerateAccessToken = vi.mocked(generateAccessToken);
 
-const mockedGenerateRefreshToken =
-  vi.mocked(generateRefreshToken);
+const mockedGenerateRefreshToken = vi.mocked(generateRefreshToken);
 
-const mockedHashRefreshToken =
-  vi.mocked(hashRefreshToken);
+const mockedHashRefreshToken = vi.mocked(hashRefreshToken);
 
-const mockedVerifyRefreshToken =
-  vi.mocked(verifyRefreshToken);
+const mockedVerifyRefreshToken = vi.mocked(verifyRefreshToken);
 
 const baseUser = {
   id: 'user-1',
@@ -115,38 +92,26 @@ const baseUser = {
 
 describe('auth service', () => {
   beforeEach(() => {
-  vi.clearAllMocks();
+    vi.clearAllMocks();
 
-  mockedGenerateAccessToken.mockReturnValue(
-    'access-token',
-  );
+    mockedGenerateAccessToken.mockReturnValue('access-token');
 
-  mockedGenerateRefreshToken.mockReturnValue({
-    token: 'refresh-token',
-    tokenHash: 'refresh-hash',
-  } as never);
+    mockedGenerateRefreshToken.mockReturnValue({
+      token: 'refresh-token',
+      tokenHash: 'refresh-hash',
+    } as never);
 
-  mockedHashRefreshToken.mockReturnValue(
-    'refresh-hash',
-  );
-});
+    mockedHashRefreshToken.mockReturnValue('refresh-hash');
+  });
 
   it('registers a new user', async () => {
-    mockedUserFindFirst.mockResolvedValue(
-      null as never,
-    );
+    mockedUserFindFirst.mockResolvedValue(null as never);
 
-    mockedBcryptHash.mockResolvedValue(
-      'hashed-password' as never,
-    );
+    mockedBcryptHash.mockResolvedValue('hashed-password' as never);
 
-    mockedUserCreate.mockResolvedValue(
-      baseUser as never,
-    );
+    mockedUserCreate.mockResolvedValue(baseUser as never);
 
-    mockedSessionCreate.mockResolvedValue(
-      {} as never,
-    );
+    mockedSessionCreate.mockResolvedValue({} as never);
 
     const result = await registerUser({
       username: 'asil',
@@ -155,23 +120,15 @@ describe('auth service', () => {
       name: 'Asil',
     });
 
-    expect(result.user.username).toBe(
-      'asil',
-    );
+    expect(result.user.username).toBe('asil');
 
-    expect(result.accessToken).toBe(
-      'access-token',
-    );
+    expect(result.accessToken).toBe('access-token');
 
-    expect(result.refreshToken).toBe(
-      'refresh-token',
-    );
+    expect(result.refreshToken).toBe('refresh-token');
   });
 
   it('rejects duplicate username', async () => {
-    mockedUserFindFirst.mockResolvedValue(
-      baseUser as never,
-    );
+    mockedUserFindFirst.mockResolvedValue(baseUser as never);
 
     await expect(
       registerUser({
@@ -206,17 +163,11 @@ describe('auth service', () => {
   });
 
   it('logs in user with valid credentials', async () => {
-    mockedUserFindUnique.mockResolvedValue(
-      baseUser as never,
-    );
+    mockedUserFindUnique.mockResolvedValue(baseUser as never);
 
-    mockedBcryptCompare.mockResolvedValue(
-      true as never,
-    );
+    mockedBcryptCompare.mockResolvedValue(true as never);
 
-    mockedSessionCreate.mockResolvedValue(
-      {} as never,
-    );
+    mockedSessionCreate.mockResolvedValue({} as never);
 
     const result = await loginUser({
       email: 'asil@example.com',
@@ -224,15 +175,11 @@ describe('auth service', () => {
     });
 
     expect(result.user.id).toBe('user-1');
-    expect(result.accessToken).toBe(
-      'access-token',
-    );
+    expect(result.accessToken).toBe('access-token');
   });
 
   it('rejects login when user does not exist', async () => {
-    mockedUserFindUnique.mockResolvedValue(
-      null as never,
-    );
+    mockedUserFindUnique.mockResolvedValue(null as never);
 
     await expect(
       loginUser({
@@ -246,13 +193,9 @@ describe('auth service', () => {
   });
 
   it('rejects login with invalid password', async () => {
-    mockedUserFindUnique.mockResolvedValue(
-      baseUser as never,
-    );
+    mockedUserFindUnique.mockResolvedValue(baseUser as never);
 
-    mockedBcryptCompare.mockResolvedValue(
-      false as never,
-    );
+    mockedBcryptCompare.mockResolvedValue(false as never);
 
     await expect(
       loginUser({
@@ -266,27 +209,18 @@ describe('auth service', () => {
   });
 
   it('returns current user', async () => {
-    mockedUserFindUnique.mockResolvedValue(
-      baseUser as never,
-    );
+    mockedUserFindUnique.mockResolvedValue(baseUser as never);
 
-    const result =
-      await getCurrentUser('user-1');
+    const result = await getCurrentUser('user-1');
 
     expect(result.id).toBe('user-1');
-    expect(result.email).toBe(
-      'asil@example.com',
-    );
+    expect(result.email).toBe('asil@example.com');
   });
 
   it('throws 404 when current user does not exist', async () => {
-    mockedUserFindUnique.mockResolvedValue(
-      null as never,
-    );
+    mockedUserFindUnique.mockResolvedValue(null as never);
 
-    await expect(
-      getCurrentUser('missing-user'),
-    ).rejects.toMatchObject({
+    await expect(getCurrentUser('missing-user')).rejects.toMatchObject({
       statusCode: 404,
       code: 'USER_NOT_FOUND',
     });
@@ -297,13 +231,9 @@ describe('auth service', () => {
       sub: 'user-1',
     } as never);
 
-    mockedSessionFindUnique.mockResolvedValue(
-      null as never,
-    );
+    mockedSessionFindUnique.mockResolvedValue(null as never);
 
-    await expect(
-      refreshAuth('refresh-token'),
-    ).rejects.toMatchObject({
+    await expect(refreshAuth('refresh-token')).rejects.toMatchObject({
       statusCode: 401,
       code: 'INVALID_REFRESH_TOKEN',
     });
@@ -318,16 +248,12 @@ describe('auth service', () => {
       id: 'session-1',
       userId: 'user-1',
       refreshTokenHash: 'refresh-hash',
-      expiresAt: new Date(
-        Date.now() + 60_000,
-      ),
+      expiresAt: new Date(Date.now() + 60_000),
       revokedAt: new Date(),
       createdAt: new Date(),
     } as never);
 
-    await expect(
-      refreshAuth('refresh-token'),
-    ).rejects.toMatchObject({
+    await expect(refreshAuth('refresh-token')).rejects.toMatchObject({
       statusCode: 401,
       code: 'REFRESH_TOKEN_REVOKED',
     });
@@ -342,16 +268,12 @@ describe('auth service', () => {
       id: 'session-1',
       userId: 'user-1',
       refreshTokenHash: 'refresh-hash',
-      expiresAt: new Date(
-        Date.now() - 60_000,
-      ),
+      expiresAt: new Date(Date.now() - 60_000),
       revokedAt: null,
       createdAt: new Date(),
     } as never);
 
-    await expect(
-      refreshAuth('refresh-token'),
-    ).rejects.toMatchObject({
+    await expect(refreshAuth('refresh-token')).rejects.toMatchObject({
       statusCode: 401,
       code: 'REFRESH_TOKEN_EXPIRED',
     });
@@ -366,16 +288,12 @@ describe('auth service', () => {
       id: 'session-1',
       userId: 'user-1',
       refreshTokenHash: 'refresh-hash',
-      expiresAt: new Date(
-        Date.now() + 60_000,
-      ),
+      expiresAt: new Date(Date.now() + 60_000),
       revokedAt: null,
       createdAt: new Date(),
     } as never);
 
-    await expect(
-      refreshAuth('refresh-token'),
-    ).rejects.toMatchObject({
+    await expect(refreshAuth('refresh-token')).rejects.toMatchObject({
       statusCode: 401,
       code: 'INVALID_REFRESH_TOKEN',
     });
@@ -390,41 +308,26 @@ describe('auth service', () => {
       id: 'session-1',
       userId: 'user-1',
       refreshTokenHash: 'refresh-hash',
-      expiresAt: new Date(
-        Date.now() + 60_000,
-      ),
+      expiresAt: new Date(Date.now() + 60_000),
       revokedAt: null,
       createdAt: new Date(),
     } as never);
 
-    mockedUserFindUnique.mockResolvedValue(
-      baseUser as never,
-    );
+    mockedUserFindUnique.mockResolvedValue(baseUser as never);
 
-    mockedSessionUpdate.mockReturnValue(
-      {} as never,
-    );
+    mockedSessionUpdate.mockReturnValue({} as never);
 
-    mockedSessionCreate.mockReturnValue(
-      {} as never,
-    );
+    mockedSessionCreate.mockReturnValue({} as never);
 
-    mockedTransaction.mockResolvedValue(
-      [] as never,
-    );
+    mockedTransaction.mockResolvedValue([] as never);
 
-    const result =
-      await refreshAuth('refresh-token');
+    const result = await refreshAuth('refresh-token');
 
     expect(result.user.id).toBe('user-1');
 
-    expect(result.accessToken).toBe(
-      'access-token',
-    );
+    expect(result.accessToken).toBe('access-token');
 
-    expect(result.refreshToken).toBe(
-      'refresh-token',
-    );
+    expect(result.refreshToken).toBe('refresh-token');
 
     expect(mockedTransaction).toHaveBeenCalledOnce();
   });
@@ -434,12 +337,8 @@ describe('auth service', () => {
       count: 1,
     } as never);
 
-    await expect(
-      logoutUser('refresh-token'),
-    ).resolves.toBeUndefined();
+    await expect(logoutUser('refresh-token')).resolves.toBeUndefined();
 
-    expect(
-      mockedSessionUpdateMany,
-    ).toHaveBeenCalledOnce();
+    expect(mockedSessionUpdateMany).toHaveBeenCalledOnce();
   });
 });

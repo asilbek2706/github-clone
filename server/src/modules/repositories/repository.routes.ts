@@ -10,7 +10,7 @@ import {
   remove,
   update,
   updateCollaborator,
-    removeCollaborator,
+  removeCollaborator,
 } from './repository.controller.js';
 
 const router = Router();
@@ -21,9 +21,17 @@ router.get('/:username/:name', getOne);
 router.patch('/:username/:name', authMiddleware, update);
 router.delete('/:username/:name', authMiddleware, remove);
 
-router.post('/:username/:name/collaborators',  authMiddleware,  addCollaborator);
-router.get('/:username/:name/collaborators',  authMiddleware,  listCollaborators);
-router.patch('/:username/:name/collaborators/:collaboratorUsername', authMiddleware,  updateCollaborator);
-router.delete('/:username/:name/collaborators/:collaboratorUsername',  authMiddleware,  removeCollaborator);
+router.post('/:username/:name/collaborators', authMiddleware, addCollaborator);
+router.get('/:username/:name/collaborators', authMiddleware, listCollaborators);
+router.patch(
+  '/:username/:name/collaborators/:collaboratorUsername',
+  authMiddleware,
+  updateCollaborator,
+);
+router.delete(
+  '/:username/:name/collaborators/:collaboratorUsername',
+  authMiddleware,
+  removeCollaborator,
+);
 
 export default router;

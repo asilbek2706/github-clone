@@ -1,16 +1,8 @@
-import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import prisma from '../../../src/config/prisma.js';
 
-import {
-  authorizeRepositoryAccess,
-} from '../../../src/modules/repositories/repository.authorization.service.js';
+import { authorizeRepositoryAccess } from '../../../src/modules/repositories/repository.authorization.service.js';
 
 vi.mock('../../../src/config/prisma.js', () => ({
   default: {
@@ -20,8 +12,7 @@ vi.mock('../../../src/config/prisma.js', () => ({
   },
 }));
 
-const mockedFindUnique =
-  vi.mocked(prisma.repository.findUnique);
+const mockedFindUnique = vi.mocked(prisma.repository.findUnique);
 
 describe('authorizeRepositoryAccess', () => {
   beforeEach(() => {
@@ -29,16 +20,9 @@ describe('authorizeRepositoryAccess', () => {
   });
 
   it('throws 404 when repository does not exist', async () => {
-    mockedFindUnique.mockResolvedValue(
-      null as never,
-    );
+    mockedFindUnique.mockResolvedValue(null as never);
 
-    await expect(
-      authorizeRepositoryAccess(
-        'repo-1',
-        'READ',
-      ),
-    ).rejects.toMatchObject({
+    await expect(authorizeRepositoryAccess('repo-1', 'READ')).rejects.toMatchObject({
       statusCode: 404,
       code: 'REPOSITORY_NOT_FOUND',
     });
@@ -56,16 +40,9 @@ describe('authorizeRepositoryAccess', () => {
       collaborators: [],
     } as never);
 
-    const result =
-      await authorizeRepositoryAccess(
-        'repo-1',
-        'READ',
-        'owner-1',
-      );
+    const result = await authorizeRepositoryAccess('repo-1', 'READ', 'owner-1');
 
-    expect(result.permission).toBe(
-      'OWNER',
-    );
+    expect(result.permission).toBe('OWNER');
   });
 
   it('allows repository owner to write', async () => {
@@ -80,16 +57,9 @@ describe('authorizeRepositoryAccess', () => {
       collaborators: [],
     } as never);
 
-    const result =
-      await authorizeRepositoryAccess(
-        'repo-1',
-        'WRITE',
-        'owner-1',
-      );
+    const result = await authorizeRepositoryAccess('repo-1', 'WRITE', 'owner-1');
 
-    expect(result.permission).toBe(
-      'OWNER',
-    );
+    expect(result.permission).toBe('OWNER');
   });
 
   it('allows anonymous read for public repository', async () => {
@@ -104,15 +74,9 @@ describe('authorizeRepositoryAccess', () => {
       collaborators: false,
     } as never);
 
-    const result =
-      await authorizeRepositoryAccess(
-        'repo-1',
-        'READ',
-      );
+    const result = await authorizeRepositoryAccess('repo-1', 'READ');
 
-    expect(result.permission).toBe(
-      'PUBLIC',
-    );
+    expect(result.permission).toBe('PUBLIC');
   });
 
   it('allows READ collaborator to read', async () => {
@@ -131,16 +95,9 @@ describe('authorizeRepositoryAccess', () => {
       ],
     } as never);
 
-    const result =
-      await authorizeRepositoryAccess(
-        'repo-1',
-        'READ',
-        'user-1',
-      );
+    const result = await authorizeRepositoryAccess('repo-1', 'READ', 'user-1');
 
-    expect(result.permission).toBe(
-      'READ',
-    );
+    expect(result.permission).toBe('READ');
   });
 
   it('denies WRITE access for READ collaborator', async () => {
@@ -159,13 +116,7 @@ describe('authorizeRepositoryAccess', () => {
       ],
     } as never);
 
-    await expect(
-      authorizeRepositoryAccess(
-        'repo-1',
-        'WRITE',
-        'user-1',
-      ),
-    ).rejects.toMatchObject({
+    await expect(authorizeRepositoryAccess('repo-1', 'WRITE', 'user-1')).rejects.toMatchObject({
       statusCode: 403,
       code: 'REPOSITORY_ACCESS_DENIED',
     });
@@ -187,16 +138,9 @@ describe('authorizeRepositoryAccess', () => {
       ],
     } as never);
 
-    const result =
-      await authorizeRepositoryAccess(
-        'repo-1',
-        'WRITE',
-        'user-1',
-      );
+    const result = await authorizeRepositoryAccess('repo-1', 'WRITE', 'user-1');
 
-    expect(result.permission).toBe(
-      'WRITE',
-    );
+    expect(result.permission).toBe('WRITE');
   });
 
   it('denies anonymous read for private repository', async () => {
@@ -211,12 +155,7 @@ describe('authorizeRepositoryAccess', () => {
       collaborators: false,
     } as never);
 
-    await expect(
-      authorizeRepositoryAccess(
-        'repo-1',
-        'READ',
-      ),
-    ).rejects.toMatchObject({
+    await expect(authorizeRepositoryAccess('repo-1', 'READ')).rejects.toMatchObject({
       statusCode: 403,
       code: 'REPOSITORY_ACCESS_DENIED',
     });

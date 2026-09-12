@@ -7,29 +7,17 @@ export interface AuthenticatedRequest extends Request {
   userId: string;
 }
 
-export const authMiddleware = (
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): void => {
+export const authMiddleware = (req: Request, _res: Response, next: NextFunction): void => {
   const authorization = req.headers.authorization;
 
   if (!authorization) {
-    throw new AuthError(
-      'Authorization header is required',
-      401,
-      'AUTHORIZATION_REQUIRED',
-    );
+    throw new AuthError('Authorization header is required', 401, 'AUTHORIZATION_REQUIRED');
   }
 
   const [scheme, token] = authorization.split(' ');
 
   if (scheme !== 'Bearer' || !token) {
-    throw new AuthError(
-      'Invalid authorization header',
-      401,
-      'INVALID_AUTHORIZATION_HEADER',
-    );
+    throw new AuthError('Invalid authorization header', 401, 'INVALID_AUTHORIZATION_HEADER');
   }
 
   try {
@@ -39,10 +27,6 @@ export const authMiddleware = (
 
     next();
   } catch {
-    throw new AuthError(
-      'Invalid or expired access token',
-      401,
-      'INVALID_ACCESS_TOKEN',
-    );
+    throw new AuthError('Invalid or expired access token', 401, 'INVALID_ACCESS_TOKEN');
   }
 };
