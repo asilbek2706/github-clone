@@ -16,9 +16,10 @@ model User {
   avatarUrl String?
   bio       String?
 
-  sessions     Session[]
-  repositories Repository[]
-  personalAccessTokens PersonalAccessToken[]
+  sessions                 Session[]
+  repositories             Repository[]
+  personalAccessTokens     PersonalAccessToken[]
+  repositoryCollaborations RepositoryCollaborator[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -41,11 +42,11 @@ model Session {
 }
 
 model PersonalAccessToken {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   name        String
-  tokenPrefix String   @unique
-  tokenHash   String   @unique
+  tokenPrefix String    @unique
+  tokenHash   String    @unique
   expiresAt   DateTime?
   lastUsedAt  DateTime?
   createdAt   DateTime  @default(now())
@@ -66,9 +67,33 @@ model Repository {
 
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
+  collaborators RepositoryCollaborator[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([ownerId, name])
   @@index([ownerId])
+}
+
+enum RepositoryPermission {
+  READ
+  WRITE
+}
+
+model RepositoryCollaborator {
+  id           String               @id @default(cuid())
+  repositoryId String
+  userId       String
+  permission   RepositoryPermission @default(READ)
+
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([repositoryId, userId])
+  @@index([repositoryId])
+  @@index([userId])
 }
