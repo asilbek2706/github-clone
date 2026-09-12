@@ -186,3 +186,81 @@ export const getRepositoryCollaborators =
 
     return collaborators;
   };
+
+export const updateRepositoryCollaborator =
+  async (
+    ownerId: string,
+    username: string,
+    repositoryName: string,
+    collaboratorUsername: string,
+    permission: RepositoryCollaboratorPermission,
+  ): Promise<RepositoryCollaboratorResponse> => {
+    const repository =
+      await getOwnedRepository(
+        ownerId,
+        username,
+        repositoryName,
+      );
+
+    const collaboratorUser =
+      await prisma.user.findUnique({
+        where: {
+          username: collaboratorUsername,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+    if (!collaboratorUser) {
+      throw new AuthError(
+        'Collaborator user not found',
+        404,
+        'COLLABORATOR_USER_NOT_FOUND',
+      );
+    }
+
+    const existingCollaborator =
+      await prisma.repositoryCollaborator.findUnique({
+        where: {
+          repositoryId_userId: {
+            repositoryId: repository.id,
+            userId: collaboratorUser.id,
+          },
+        },
+      });
+
+    if (!existingCollaborator) {
+      throw new AuthError(
+        'Repository collaborator not found',
+        404,
+        'COLLABORATOR_NOT_FOUND',
+      );
+    }
+
+    const collaborator =
+      await prisma.repositoryCollaborator.update({
+        where: {
+          id: existingCollaborator.id,
+        },
+        data: {
+          permission,
+        },
+        select: {
+          id: true,
+          permission: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      });
+
+    return collaborator;
+  };
