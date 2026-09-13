@@ -1,14 +1,15 @@
-import request from 'supertest';
+import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
-import { spawn } from 'node:child_process';
 
+import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import app from '../../../src/app.js';
 
 import prisma from '../../../src/config/prisma.js';
 
+import { AuthError } from '../../../src/modules/auth/auth.errors.js';
 import { verifyPersonalAccessToken } from '../../../src/modules/auth/pat.service.js';
 
 import { authorizeRepositoryAccess } from '../../../src/modules/repositories/repository.authorization.service.js';
@@ -88,9 +89,7 @@ const mockSuccessfulGitBackend = () => {
       ].join('\r\n');
 
       child.stdout.write(Buffer.from(headers));
-
       child.stdout.write(Buffer.from('git-response'));
-
       child.stdout.end();
 
       child.emit('close', 0);
@@ -233,8 +232,6 @@ describe('Git HTTP integration', () => {
       username: 'testuser',
     });
 
-    const { AuthError } = await import('../../../src/modules/auth/auth.errors.js');
-
     mockedAuthorizeRepositoryAccess.mockRejectedValue(
       new AuthError('Repository access denied', 403, 'REPOSITORY_ACCESS_DENIED'),
     );
@@ -300,5 +297,258 @@ describe('Git HTTP integration', () => {
         }),
       }),
     );
+  });
+
+  it('rejects malformed basic authentication credentials', async () => {
+    mockedFindRepository.mockResolvedValue({
+      ...gitRepository,
+      isPrivate: true,
+    } as never);
+
+    const malformedCredentials = Buffer.from('testuser').toString('base64');
+
+    const response = await request(app)
+      .get('/asil/demo.git/info/refs?service=git-upload-pack')
+      .set('Authorization', `Basic ${malformedCredentials}`);
+
+    expect(response.status).toBe(401);
+
+    expect(response.body).toMatchObject({
+      success: false,
+      code: 'GIT_AUTH_REQUIRED',
+      message: 'Git username and personal access token are required',
+    });
+
+    expect(response.headers['www-authenticate']).toBe('Basic realm="GitZone"');
+
+    expect(mockedVerifyPersonalAccessToken).not.toHaveBeenCalled();
+
+    expect(mockedSpawn).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid personal access token', async () => {
+    mockedFindRepository.mockResolvedValue({
+      ...gitRepository,
+      isPrivate: true,
+    } as never);
+
+    mockedVerifyPersonalAccessToken.mockRejectedValue(
+      new AuthError('Invalid personal access token', 401, 'INVALID_PERSONAL_ACCESS_TOKEN'),
+    );
+
+    const credentials = Buffer.from('testuser:gzp_invalidtoken').toString('base64');
+
+    const response = await request(app)
+      .get('/asil/demo.git/info/refs?service=git-upload-pack')
+      .set('Authorization', `Basic ${credentials}`);
+
+    expect(response.status).toBe(401);
+
+    expect(response.body).toMatchObject({
+      success: false,
+      code: 'INVALID_PERSONAL_ACCESS_TOKEN',
+      message: 'Invalid personal access token',
+    });
+
+    expect(response.headers['www-authenticate']).toBe('Basic realm="GitZone"');
+
+    expect(mockedVerifyPersonalAccessToken).toHaveBeenCalledWith('testuser', 'gzp_invalidtoken');
+
+    expect(mockedAuthorizeRepositoryAccess).not.toHaveBeenCalled();
+
+    expect(mockedSpawn).not.toHaveBeenCalled();
+  });
+
+  it('handles git-upload-pack POST as a read request', async () => {
+    mockedFindRepository.mockResolvedValue(gitRepository as never);
+
+    mockedAuthorizeRepositoryAccess.mockResolvedValue({
+      permission: 'PUBLIC',
+    } as never);
+
+    mockSuccessfulGitBackend();
+
+    const response = await request(app)
+      .post('/asil/demo.git/git-upload-pack')
+      .set('Content-Type', 'application/x-git-upload-pack-request')
+      .send(Buffer.from('git-upload-request'));
+
+    expect(response.status).toBe(200);
+
+    expect(mockedVerifyPersonalAccessToken).not.toHaveBeenCalled();
+
+    expect(mockedAuthorizeRepositoryAccess).toHaveBeenCalledWith('repo-1', 'READ');
+
+    expect(mockedSpawn).toHaveBeenCalledWith(
+      '/usr/lib/git-core/git-http-backend',
+      [],
+      expect.objectContaining({
+        env: expect.objectContaining({
+          PATH_INFO: '/asil/demo.git/git-upload-pack',
+          REQUEST_METHOD: 'POST',
+        }),
+      }),
+    );
+  });
+
+  it('handles git-receive-pack POST as a write request', async () => {
+    mockedFindRepository.mockResolvedValue(gitRepository as never);
+
+    mockedVerifyPersonalAccessToken.mockResolvedValue({
+      userId: 'user-2',
+      username: 'testuser',
+    });
+
+    mockedAuthorizeRepositoryAccess.mockResolvedValue({
+      permission: 'WRITE',
+    } as never);
+
+    mockSuccessfulGitBackend();
+
+    const credentials = Buffer.from('testuser:gzp_testtoken').toString('base64');
+
+    const response = await request(app)
+      .post('/asil/demo.git/git-receive-pack')
+      .set('Authorization', `Basic ${credentials}`)
+      .set('Content-Type', 'application/x-git-receive-pack-request')
+      .send(Buffer.from('git-receive-request'));
+
+    expect(response.status).toBe(200);
+
+    expect(mockedVerifyPersonalAccessToken).toHaveBeenCalledWith('testuser', 'gzp_testtoken');
+
+    expect(mockedAuthorizeRepositoryAccess).toHaveBeenCalledWith('repo-1', 'WRITE', 'user-2');
+
+    expect(mockedSpawn).toHaveBeenCalledWith(
+      '/usr/lib/git-core/git-http-backend',
+      [],
+      expect.objectContaining({
+        env: expect.objectContaining({
+          PATH_INFO: '/asil/demo.git/git-receive-pack',
+          REQUEST_METHOD: 'POST',
+        }),
+      }),
+    );
+  });
+
+  it('uses the status returned by git-http-backend CGI headers', async () => {
+    mockedFindRepository.mockResolvedValue(gitRepository as never);
+
+    mockedAuthorizeRepositoryAccess.mockResolvedValue({
+      permission: 'PUBLIC',
+    } as never);
+
+    mockedSpawn.mockImplementation(() => {
+      const child = createGitBackendProcess();
+
+      setImmediate(() => {
+        const headers = [
+          'Status: 201 Created',
+          'Content-Type: application/octet-stream',
+          '',
+          '',
+        ].join('\r\n');
+
+        child.stdout.write(Buffer.from(headers));
+        child.stdout.write(Buffer.from('created'));
+        child.stdout.end();
+
+        child.emit('close', 0);
+      });
+
+      return child as never;
+    });
+
+    const response = await request(app).get('/asil/demo.git/info/refs?service=git-upload-pack');
+
+    expect(response.status).toBe(201);
+
+    expect(mockedSpawn).toHaveBeenCalledOnce();
+  });
+
+  it('preserves binary response data from git-http-backend', async () => {
+    mockedFindRepository.mockResolvedValue(gitRepository as never);
+
+    mockedAuthorizeRepositoryAccess.mockResolvedValue({
+      permission: 'PUBLIC',
+    } as never);
+
+    const binaryData = Buffer.from([0x00, 0x01, 0x7f, 0x80, 0xfe, 0xff]);
+
+    mockedSpawn.mockImplementation(() => {
+      const child = createGitBackendProcess();
+
+      setImmediate(() => {
+        const headers = ['Status: 200 OK', 'Content-Type: application/octet-stream', '', ''].join(
+          '\r\n',
+        );
+
+        child.stdout.write(Buffer.from(headers));
+        child.stdout.write(binaryData);
+        child.stdout.end();
+
+        child.emit('close', 0);
+      });
+
+      return child as never;
+    });
+
+    const response = await request(app).get('/asil/demo.git/info/refs?service=git-upload-pack');
+
+    expect(response.status).toBe(200);
+
+    expect(Buffer.isBuffer(response.body)).toBe(true);
+
+    expect(Buffer.compare(response.body as Buffer, binaryData)).toBe(0);
+  });
+
+  it('returns 500 when git-http-backend process emits an error', async () => {
+    mockedFindRepository.mockResolvedValue(gitRepository as never);
+
+    mockedAuthorizeRepositoryAccess.mockResolvedValue({
+      permission: 'PUBLIC',
+    } as never);
+
+    mockedSpawn.mockImplementation(() => {
+      const child = createGitBackendProcess();
+
+      setImmediate(() => {
+        child.emit('error', new Error('Unable to start git-http-backend'));
+      });
+
+      return child as never;
+    });
+
+    const response = await request(app).get('/asil/demo.git/info/refs?service=git-upload-pack');
+
+    expect(response.status).toBe(500);
+
+    expect(mockedSpawn).toHaveBeenCalledOnce();
+  });
+
+  it('returns 500 when git-http-backend exits with a non-zero code before sending headers', async () => {
+    mockedFindRepository.mockResolvedValue(gitRepository as never);
+
+    mockedAuthorizeRepositoryAccess.mockResolvedValue({
+      permission: 'PUBLIC',
+    } as never);
+
+    mockedSpawn.mockImplementation(() => {
+      const child = createGitBackendProcess();
+
+      setImmediate(() => {
+        child.stdout.end();
+
+        child.emit('close', 1);
+      });
+
+      return child as never;
+    });
+
+    const response = await request(app).get('/asil/demo.git/info/refs?service=git-upload-pack');
+
+    expect(response.status).toBe(500);
+
+    expect(mockedSpawn).toHaveBeenCalledOnce();
   });
 });
