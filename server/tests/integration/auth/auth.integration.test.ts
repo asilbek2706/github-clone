@@ -13,12 +13,19 @@ import {
 
 import { verifyAccessToken } from '../../../src/modules/auth/auth.tokens.js';
 
+import { getPersonalAccessTokens } from '../../../src/modules/auth/pat.service.js';
+
 vi.mock('../../../src/modules/auth/auth.service.js', () => ({
   registerUser: vi.fn(),
   loginUser: vi.fn(),
   refreshAuth: vi.fn(),
   getCurrentUser: vi.fn(),
   logoutUser: vi.fn(),
+}));
+
+vi.mock('../../../src/modules/auth/pat.service.js', () => ({
+  createPersonalAccessToken: vi.fn(),
+  getPersonalAccessTokens: vi.fn(),
 }));
 
 vi.mock('../../../src/modules/auth/auth.tokens.js', () => ({
@@ -40,6 +47,8 @@ const mockedGetCurrentUser = vi.mocked(getCurrentUser);
 const mockedLogoutUser = vi.mocked(logoutUser);
 
 const mockedVerifyAccessToken = vi.mocked(verifyAccessToken);
+
+const mockedGetPersonalAccessTokens = vi.mocked(getPersonalAccessTokens);
 
 const createdAt = new Date();
 const updatedAt = new Date();
@@ -287,5 +296,54 @@ describe('auth API integration', () => {
     });
 
     expect(mockedLoginUser).not.toHaveBeenCalled();
+  });
+
+  it('returns personal access tokens for authenticated user', async () => {
+    const tokenCreatedAt = new Date('2026-09-13T08:00:00.000Z');
+    const lastUsedAt = new Date('2026-09-13T09:00:00.000Z');
+
+    mockedVerifyAccessToken.mockReturnValue({
+      sub: 'user-1',
+    } as never);
+
+    mockedGetPersonalAccessTokens.mockResolvedValue([
+      {
+        id: 'pat-1',
+        name: 'Laptop token',
+        tokenPrefix: 'gzp_example',
+        expiresAt: null,
+        lastUsedAt,
+        createdAt: tokenCreatedAt,
+      },
+    ]);
+
+    const response = await request(app)
+      .get('/api/auth/tokens')
+      .set('Authorization', 'Bearer test-access-token');
+
+    expect(response.status).toBe(200);
+
+    expect(mockedVerifyAccessToken).toHaveBeenCalledWith('test-access-token');
+
+    expect(mockedGetPersonalAccessTokens).toHaveBeenCalledWith('user-1');
+
+    expect(response.body).toEqual({
+      success: true,
+      data: {
+        tokens: [
+          {
+            id: 'pat-1',
+            name: 'Laptop token',
+            tokenPrefix: 'gzp_example',
+            expiresAt: null,
+            lastUsedAt: lastUsedAt.toISOString(),
+            createdAt: tokenCreatedAt.toISOString(),
+          },
+        ],
+      },
+    });
+
+    expect(response.body.data.tokens[0]).not.toHaveProperty('tokenHash');
+    expect(response.body.data.tokens[0]).not.toHaveProperty('token');
   });
 });

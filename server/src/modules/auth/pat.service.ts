@@ -140,3 +140,33 @@ export const verifyPersonalAccessToken = async (
     username: user.username,
   };
 };
+
+export const getPersonalAccessTokens = async (
+  userId: string,
+): Promise<
+  Array<{
+    id: string;
+    name: string;
+    tokenPrefix: string;
+    expiresAt: Date | null;
+    lastUsedAt: Date | null;
+    createdAt: Date;
+  }>
+> => {
+  return prisma.personalAccessToken.findMany({
+    where: {
+      userId,
+    },
+    select: {
+      id: true,
+      name: true,
+      tokenPrefix: true,
+      expiresAt: true,
+      lastUsedAt: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+};

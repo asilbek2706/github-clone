@@ -18,7 +18,7 @@ import {
   registerUser,
 } from './auth.service.js';
 
-import { createPersonalAccessToken } from './pat.service.js';
+import { createPersonalAccessToken, getPersonalAccessTokens } from './pat.service.js';
 
 import { createPersonalAccessTokenSchema, loginSchema, registerSchema } from './auth.validation.js';
 
@@ -142,6 +142,19 @@ export const createToken = async (req: Request, res: Response): Promise<void> =>
       name: personalAccessToken.name,
       expiresAt: personalAccessToken.expiresAt,
       createdAt: personalAccessToken.createdAt,
+    },
+  });
+};
+
+export const listTokens = async (req: Request, res: Response): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
+
+  const personalAccessTokens = await getPersonalAccessTokens(authenticatedReq.userId);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      tokens: personalAccessTokens,
     },
   });
 };

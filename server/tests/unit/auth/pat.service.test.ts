@@ -4,6 +4,7 @@ import prisma from '../../../src/config/prisma.js';
 
 import {
   createPersonalAccessToken,
+  getPersonalAccessTokens,
   verifyPersonalAccessToken,
 } from '../../../src/modules/auth/pat.service.js';
 
@@ -14,6 +15,7 @@ vi.mock('../../../src/config/prisma.js', () => ({
     },
     personalAccessToken: {
       create: vi.fn(),
+      findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
     },
@@ -23,6 +25,8 @@ vi.mock('../../../src/config/prisma.js', () => ({
 const mockedUserFindUnique = vi.mocked(prisma.user.findUnique);
 
 const mockedPatCreate = vi.mocked(prisma.personalAccessToken.create);
+
+const mockedPatFindMany = vi.mocked(prisma.personalAccessToken.findMany);
 
 const mockedPatFindUnique = vi.mocked(prisma.personalAccessToken.findUnique);
 
@@ -446,5 +450,47 @@ describe('personal access token service', () => {
     });
 
     expect(mockedPatUpdate).not.toHaveBeenCalled();
+  });
+
+  it('returns only safe personal access token fields for a user', async () => {
+    const createdAt = new Date('2026-09-13T08:00:00.000Z');
+    const lastUsedAt = new Date('2026-09-13T09:00:00.000Z');
+
+    const tokens = [
+      {
+        id: 'pat-1',
+        name: 'Laptop token',
+        tokenPrefix: 'gzp_example',
+        expiresAt: null,
+        lastUsedAt,
+        createdAt,
+      },
+    ];
+
+    mockedPatFindMany.mockResolvedValue(tokens as never);
+
+    const result = await getPersonalAccessTokens('user-1');
+
+    expect(result).toEqual(tokens);
+
+    expect(mockedPatFindMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+      },
+      select: {
+        id: true,
+        name: true,
+        tokenPrefix: true,
+        expiresAt: true,
+        lastUsedAt: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    expect(result[0]).not.toHaveProperty('tokenHash');
+    expect(result[0]).not.toHaveProperty('token');
   });
 });
