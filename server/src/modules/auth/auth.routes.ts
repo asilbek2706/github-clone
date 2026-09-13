@@ -9,6 +9,7 @@ import {
   me,
   refresh,
   register,
+  revokeToken,
 } from './auth.controller.js';
 
 const router = Router();
@@ -21,5 +22,6 @@ router.get('/me', authMiddleware, me);
 
 router.get('/tokens', authMiddleware, listTokens);
 router.post('/tokens', authMiddleware, createToken);
+router.delete('/tokens/:tokenId', authMiddleware, revokeToken);
 
 export default router;

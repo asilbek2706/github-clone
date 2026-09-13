@@ -18,7 +18,11 @@ import {
   registerUser,
 } from './auth.service.js';
 
-import { createPersonalAccessToken, getPersonalAccessTokens } from './pat.service.js';
+import {
+  createPersonalAccessToken,
+  getPersonalAccessTokens,
+  revokePersonalAccessToken,
+} from './pat.service.js';
 
 import { createPersonalAccessTokenSchema, loginSchema, registerSchema } from './auth.validation.js';
 
@@ -156,5 +160,26 @@ export const listTokens = async (req: Request, res: Response): Promise<void> => 
     data: {
       tokens: personalAccessTokens,
     },
+  });
+};
+
+export const revokeToken = async (req: Request, res: Response): Promise<void> => {
+  const authenticatedReq = req as AuthenticatedRequest;
+
+  const tokenId = req.params.tokenId;
+
+  if (typeof tokenId !== 'string') {
+    throw new AuthError(
+      'Personal access token ID is required',
+      400,
+      'PERSONAL_ACCESS_TOKEN_ID_REQUIRED',
+    );
+  }
+
+  await revokePersonalAccessToken(authenticatedReq.userId, tokenId);
+
+  res.status(200).json({
+    success: true,
+    message: 'Personal access token revoked successfully',
   });
 };

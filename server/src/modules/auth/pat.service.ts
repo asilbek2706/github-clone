@@ -170,3 +170,16 @@ export const getPersonalAccessTokens = async (
     },
   });
 };
+
+export const revokePersonalAccessToken = async (userId: string, tokenId: string): Promise<void> => {
+  const result = await prisma.personalAccessToken.deleteMany({
+    where: {
+      id: tokenId,
+      userId,
+    },
+  });
+
+  if (result.count === 0) {
+    throw new AuthError('Personal access token not found', 404, 'PERSONAL_ACCESS_TOKEN_NOT_FOUND');
+  }
+};

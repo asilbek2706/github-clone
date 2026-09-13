@@ -5,6 +5,7 @@ import prisma from '../../../src/config/prisma.js';
 import {
   createPersonalAccessToken,
   getPersonalAccessTokens,
+  revokePersonalAccessToken,
   verifyPersonalAccessToken,
 } from '../../../src/modules/auth/pat.service.js';
 
@@ -15,6 +16,7 @@ vi.mock('../../../src/config/prisma.js', () => ({
     },
     personalAccessToken: {
       create: vi.fn(),
+      deleteMany: vi.fn(),
       findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -31,6 +33,8 @@ const mockedPatFindMany = vi.mocked(prisma.personalAccessToken.findMany);
 const mockedPatFindUnique = vi.mocked(prisma.personalAccessToken.findUnique);
 
 const mockedPatUpdate = vi.mocked(prisma.personalAccessToken.update);
+
+const mockedPatDeleteMany = vi.mocked(prisma.personalAccessToken.deleteMany);
 
 describe('personal access token service', () => {
   beforeEach(() => {
@@ -492,5 +496,38 @@ describe('personal access token service', () => {
 
     expect(result[0]).not.toHaveProperty('tokenHash');
     expect(result[0]).not.toHaveProperty('token');
+  });
+
+  it('revokes a personal access token owned by the user', async () => {
+    mockedPatDeleteMany.mockResolvedValue({
+      count: 1,
+    });
+
+    await revokePersonalAccessToken('user-1', 'pat-1');
+
+    expect(mockedPatDeleteMany).toHaveBeenCalledWith({
+      where: {
+        id: 'pat-1',
+        userId: 'user-1',
+      },
+    });
+  });
+
+  it('rejects revoking a personal access token that does not belong to the user', async () => {
+    mockedPatDeleteMany.mockResolvedValue({
+      count: 0,
+    });
+
+    await expect(revokePersonalAccessToken('user-1', 'pat-2')).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'PERSONAL_ACCESS_TOKEN_NOT_FOUND',
+    });
+
+    expect(mockedPatDeleteMany).toHaveBeenCalledWith({
+      where: {
+        id: 'pat-2',
+        userId: 'user-1',
+      },
+    });
   });
 });

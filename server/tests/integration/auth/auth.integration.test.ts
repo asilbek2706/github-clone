@@ -13,7 +13,10 @@ import {
 
 import { verifyAccessToken } from '../../../src/modules/auth/auth.tokens.js';
 
-import { getPersonalAccessTokens } from '../../../src/modules/auth/pat.service.js';
+import {
+  getPersonalAccessTokens,
+  revokePersonalAccessToken,
+} from '../../../src/modules/auth/pat.service.js';
 
 vi.mock('../../../src/modules/auth/auth.service.js', () => ({
   registerUser: vi.fn(),
@@ -26,6 +29,7 @@ vi.mock('../../../src/modules/auth/auth.service.js', () => ({
 vi.mock('../../../src/modules/auth/pat.service.js', () => ({
   createPersonalAccessToken: vi.fn(),
   getPersonalAccessTokens: vi.fn(),
+  revokePersonalAccessToken: vi.fn(),
 }));
 
 vi.mock('../../../src/modules/auth/auth.tokens.js', () => ({
@@ -49,6 +53,8 @@ const mockedLogoutUser = vi.mocked(logoutUser);
 const mockedVerifyAccessToken = vi.mocked(verifyAccessToken);
 
 const mockedGetPersonalAccessTokens = vi.mocked(getPersonalAccessTokens);
+
+const mockedRevokePersonalAccessToken = vi.mocked(revokePersonalAccessToken);
 
 const createdAt = new Date();
 const updatedAt = new Date();
@@ -345,5 +351,28 @@ describe('auth API integration', () => {
 
     expect(response.body.data.tokens[0]).not.toHaveProperty('tokenHash');
     expect(response.body.data.tokens[0]).not.toHaveProperty('token');
+  });
+
+  it('revokes a personal access token for authenticated user', async () => {
+    mockedVerifyAccessToken.mockReturnValue({
+      sub: 'user-1',
+    } as never);
+
+    mockedRevokePersonalAccessToken.mockResolvedValue(undefined);
+
+    const response = await request(app)
+      .delete('/api/auth/tokens/pat-1')
+      .set('Authorization', 'Bearer test-access-token');
+
+    expect(response.status).toBe(200);
+
+    expect(mockedVerifyAccessToken).toHaveBeenCalledWith('test-access-token');
+
+    expect(mockedRevokePersonalAccessToken).toHaveBeenCalledWith('user-1', 'pat-1');
+
+    expect(response.body).toEqual({
+      success: true,
+      message: 'Personal access token revoked successfully',
+    });
   });
 });
