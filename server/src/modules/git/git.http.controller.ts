@@ -10,13 +10,9 @@ import {
   type RepositoryAccessType,
 } from '../repositories/repository.authorization.service.js';
 
-const storagePath = process.env.GIT_STORAGE_PATH;
+import { env } from '../../config/env.js';
 
-if (!storagePath) {
-  throw new Error('GIT_STORAGE_PATH is not defined');
-}
-
-const GIT_PROJECT_ROOT = path.resolve(process.cwd(), storagePath);
+const GIT_PROJECT_ROOT = path.resolve(process.cwd(), env.GIT_STORAGE_PATH);
 
 const parseBasicAuth = (
   req: Request,

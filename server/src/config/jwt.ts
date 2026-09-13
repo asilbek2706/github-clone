@@ -1,23 +1,10 @@
-import 'dotenv/config';
 import type { SignOptions } from 'jsonwebtoken';
 
-const getEnv = (key: string): string => {
-  const value = process.env[key];
-
-  if (!value) {
-    throw new Error(`${key} is not defined`);
-  }
-
-  return value;
-};
-
-const getExpiresIn = (key: string): SignOptions['expiresIn'] => {
-  return getEnv(key) as SignOptions['expiresIn'];
-};
+import { env } from './env.js';
 
 export const jwtConfig = {
-  accessSecret: getEnv('JWT_ACCESS_SECRET'),
-  refreshSecret: getEnv('JWT_REFRESH_SECRET'),
-  accessExpiresIn: getExpiresIn('JWT_ACCESS_EXPIRES_IN'),
-  refreshExpiresIn: getExpiresIn('JWT_REFRESH_EXPIRES_IN'),
+  accessSecret: env.JWT_ACCESS_SECRET,
+  refreshSecret: env.JWT_REFRESH_SECRET,
+  accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN as SignOptions['expiresIn'],
+  refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN as SignOptions['expiresIn'],
 } as const;

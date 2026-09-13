@@ -1,0 +1,33 @@
+import 'dotenv/config';
+
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+
+  PORT: z.coerce.number().int().min(1).max(65535).default(5000),
+
+  DATABASE_URL: z.string().trim().min(1, 'DATABASE_URL is required'),
+
+  JWT_ACCESS_SECRET: z.string().trim().min(1, 'JWT_ACCESS_SECRET is required'),
+
+  JWT_REFRESH_SECRET: z.string().trim().min(1, 'JWT_REFRESH_SECRET is required'),
+
+  JWT_ACCESS_EXPIRES_IN: z.string().trim().min(1, 'JWT_ACCESS_EXPIRES_IN is required'),
+
+  JWT_REFRESH_EXPIRES_IN: z.string().trim().min(1, 'JWT_REFRESH_EXPIRES_IN is required'),
+
+  GIT_STORAGE_PATH: z.string().trim().min(1, 'GIT_STORAGE_PATH is required'),
+});
+
+const result = envSchema.safeParse(process.env);
+
+if (!result.success) {
+  const errors = result.error.issues
+    .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+    .join('\n');
+
+  throw new Error(`Invalid environment configuration:\n${errors}`);
+}
+
+export const env = result.data;

@@ -4,16 +4,11 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 
 import { AuthError } from '../auth/auth.errors.js';
+import { env } from '../../config/env.js';
 
 const execFileAsync = promisify(execFile);
 
-const storagePath = process.env.GIT_STORAGE_PATH;
-
-if (!storagePath) {
-  throw new Error('GIT_STORAGE_PATH is not defined');
-}
-
-const GIT_STORAGE_PATH = path.resolve(process.cwd(), storagePath);
+const GIT_STORAGE_PATH = path.resolve(process.cwd(), env.GIT_STORAGE_PATH);
 
 const getRepositoryPath = (username: string, repositoryName: string): string => {
   return path.join(GIT_STORAGE_PATH, username, `${repositoryName}.git`);
