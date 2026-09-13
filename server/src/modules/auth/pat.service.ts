@@ -10,6 +10,17 @@ const hashPersonalAccessToken = (token: string): string => {
   return crypto.createHash('sha256').update(token).digest('hex');
 };
 
+const isTokenHashEqual = (storedHash: string, providedHash: string): boolean => {
+  const storedHashBuffer = Buffer.from(storedHash, 'hex');
+  const providedHashBuffer = Buffer.from(providedHash, 'hex');
+
+  if (storedHashBuffer.length !== providedHashBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(storedHashBuffer, providedHashBuffer);
+};
+
 const generatePersonalAccessToken = (): string => {
   const randomToken = crypto.randomBytes(TOKEN_BYTES).toString('base64url');
 
@@ -95,7 +106,7 @@ export const verifyPersonalAccessToken = async (
 
   const tokenHash = hashPersonalAccessToken(token);
 
-  if (personalAccessToken.tokenHash !== tokenHash) {
+  if (!isTokenHashEqual(personalAccessToken.tokenHash, tokenHash)) {
     throw new AuthError(
       'Invalid username or personal access token',
       401,

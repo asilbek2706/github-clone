@@ -412,4 +412,39 @@ describe('personal access token service', () => {
       vi.useRealTimers();
     }
   });
+
+  it('rejects a token with the same-length but different hash', async () => {
+    mockedUserFindUnique.mockResolvedValue({
+      id: 'user-1',
+      username: 'testuser',
+    } as never);
+
+    const token = 'gzp_valid-looking-token';
+
+    const crypto = await import('node:crypto');
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const differentHash =
+      tokenHash[0] === 'a' ? `b${tokenHash.slice(1)}` : `a${tokenHash.slice(1)}`;
+
+    mockedPatFindUnique.mockResolvedValue({
+      id: 'pat-1',
+      userId: 'user-1',
+      name: 'Test token',
+      tokenPrefix: token.slice(0, 12),
+      tokenHash: differentHash,
+      expiresAt: null,
+      lastUsedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+
+    await expect(verifyPersonalAccessToken('testuser', token)).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'INVALID_GIT_CREDENTIALS',
+    });
+
+    expect(mockedPatUpdate).not.toHaveBeenCalled();
+  });
 });
