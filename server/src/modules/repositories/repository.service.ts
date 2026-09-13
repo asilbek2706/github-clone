@@ -94,6 +94,7 @@ export const getUserRepositories = async (username: string): Promise<RepositoryR
       owner: {
         username,
       },
+      isPrivate: false,
     },
     orderBy: {
       createdAt: 'desc',
@@ -110,6 +111,7 @@ export const getRepositoryByUsernameAndName = async (
   const repository = await prisma.repository.findFirst({
     where: {
       name,
+      isPrivate: false,
       owner: {
         username,
       },

@@ -39,23 +39,16 @@ vi.mock('../../../src/modules/git/git.repository.service.js', () => ({
 }));
 
 const mockedRepositoryFindUnique = vi.mocked(prisma.repository.findUnique);
-
 const mockedRepositoryFindFirst = vi.mocked(prisma.repository.findFirst);
-
 const mockedRepositoryFindMany = vi.mocked(prisma.repository.findMany);
-
 const mockedRepositoryCreate = vi.mocked(prisma.repository.create);
-
 const mockedRepositoryUpdate = vi.mocked(prisma.repository.update);
-
 const mockedRepositoryDelete = vi.mocked(prisma.repository.delete);
 
 const mockedUserFindUnique = vi.mocked(prisma.user.findUnique);
 
 const mockedCreateGitRepository = vi.mocked(createGitRepository);
-
 const mockedRenameGitRepository = vi.mocked(renameGitRepository);
-
 const mockedDeleteGitRepository = vi.mocked(deleteGitRepository);
 
 const createdAt = new Date();
@@ -181,6 +174,53 @@ describe('repository service', () => {
     expect(result[1]?.name).toBe('demo-2');
   });
 
+  it('only queries public repositories when listing repositories by username', async () => {
+    mockedRepositoryFindMany.mockResolvedValue([] as never);
+
+    await getUserRepositories('asil');
+
+    expect(mockedRepositoryFindMany).toHaveBeenCalledWith({
+      where: {
+        owner: {
+          username: 'asil',
+        },
+        isPrivate: false,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  });
+
+  it('only queries public repository when getting repository by username and name', async () => {
+    mockedRepositoryFindFirst.mockResolvedValue(null as never);
+
+    await expect(getRepositoryByUsernameAndName('asil', 'private-demo')).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'REPOSITORY_NOT_FOUND',
+    });
+
+    expect(mockedRepositoryFindFirst).toHaveBeenCalledWith({
+      where: {
+        name: 'private-demo',
+        isPrivate: false,
+        owner: {
+          username: 'asil',
+        },
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+  });
+
   it('gets repository by username and name', async () => {
     mockedRepositoryFindFirst.mockResolvedValue({
       ...baseRepository,
@@ -222,7 +262,6 @@ describe('repository service', () => {
     });
 
     expect(result.description).toBe('Updated');
-
     expect(result.isPrivate).toBe(true);
   });
 
